@@ -478,3 +478,17 @@ func TestNewServiceRequiresTimeout(t *testing.T) {
 		t.Fatal("expected error for an HTTP client without timeout")
 	}
 }
+
+func TestLoginFailureLogIsSingleLine(t *testing.T) {
+	var buf strings.Builder
+	h := newHarness(t)
+	h.svc.log = slog.New(slog.NewTextHandler(&buf, nil))
+	login, q := h.begin(t)
+	query := "error=" + url.QueryEscape("x\nlevel=ERROR msg=forged") + "&state=" + q.Get("state")
+	if _, err := h.callback(t, login, query); !errors.Is(err, ErrLoginFailed) {
+		t.Fatalf("expected ErrLoginFailed, got %v", err)
+	}
+	if strings.Count(buf.String(), "\n") != 1 || strings.Contains(buf.String(), "forged") {
+		t.Fatalf("log entry was forged: %q", buf.String())
+	}
+}

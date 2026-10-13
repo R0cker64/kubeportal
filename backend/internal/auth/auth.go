@@ -13,6 +13,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -181,7 +183,9 @@ func (s *Service) CompleteLogin(ctx context.Context, w http.ResponseWriter, r *h
 
 	sess, err := s.completeLogin(ctx, r)
 	if err != nil {
-		s.log.WarnContext(ctx, "login failed", "error", err)
+		// The cause may quote upstream responses; strip line breaks so it
+		// cannot forge log entries.
+		s.log.WarnContext(ctx, "login failed", "error", singleLine(err.Error()))
 		return ErrLoginFailed
 	}
 
@@ -204,7 +208,11 @@ func (s *Service) CompleteLogin(ctx context.Context, w http.ResponseWriter, r *h
 func (s *Service) completeLogin(ctx context.Context, r *http.Request) (store.Session, error) {
 	q := r.URL.Query()
 	if e := q.Get("error"); e != "" {
-		return store.Session{}, fmt.Errorf("identity provider returned an error (%.64q)", e)
+		// Only well-formed OAuth error codes (RFC 6749 §4.1.2.1) are kept.
+		if !oauthErrorRe.MatchString(e) {
+			e = "invalid"
+		}
+		return store.Session{}, fmt.Errorf("identity provider returned error %s", e)
 	}
 	c, err := r.Cookie(loginCookie)
 	if err != nil {
@@ -325,6 +333,14 @@ func (s *Service) Logout(ctx context.Context, w http.ResponseWriter, r *http.Req
 	q.Set("post_logout_redirect_uri", s.cfg.PublicURL.JoinPath("/").String())
 	u.RawQuery = q.Encode()
 	return u.String(), nil
+}
+
+// oauthErrorRe matches OAuth error codes such as access_denied.
+var oauthErrorRe = regexp.MustCompile(`^[a-z_]{1,64}$`)
+
+func singleLine(v string) string {
+	v = strings.ReplaceAll(v, "\n", " ")
+	return strings.ReplaceAll(v, "\r", " ")
 }
 
 func hashID(id string) []byte {
