@@ -22,7 +22,7 @@ Si tu usuario acaba de entrar al grupo `docker`, cierra sesión y vuelve a entra
 ```bash
 make dev-up       # crea el cluster y despliega todo (idempotente)
 make dev-verify   # comprueba {team="payments"} en Loki y label_team en kube-state-metrics
-make dev-deploy   # construye la imagen, la carga en kind e instala el chart
+make dev-deploy   # construye la imagen, la carga en kind, instala el chart y carga los equipos de ejemplo
 make dev-portal   # port-forward del portal en http://localhost:8080
 make dev-keycloak # port-forward de Keycloak en http://localhost:8180
 make dev-down     # elimina el cluster
@@ -55,14 +55,24 @@ Los tres namespaces de ambiente y `kubeportal` aplican el Pod Security Standard 
 | `bob` | `team-catalog` |
 | `carol` | ninguno (no debe ver nada) |
 
+El mapeo de grupos a equipos de ejemplo (`team-payments` → `payments`, `team-catalog` → `catalog`) se carga con `deploy/kind/manifests/seed-teams.sql` al final de `make dev-deploy`. En la fase 3 se gestionará desde la vista de administración.
+
+Para probar el portal en el navegador: `make dev-portal` y `make dev-keycloak` en dos terminales, abrir http://localhost:8080 y entrar con uno de los usuarios (la contraseña es `DEMO_USER_PASSWORD` de `.kind/secrets.env`).
+
 Las contraseñas, el secreto del client OIDC y la contraseña de PostgreSQL se generan al azar la primera vez en `.kind/secrets.env` (ignorado por git) y se cargan como Secrets de Kubernetes. No hay credenciales en el repositorio.
 
-## Backend y frontend sin cluster
+## Backend y frontend fuera del cluster
+
+El backend necesita PostgreSQL, Keycloak, Loki, Prometheus y la API de Kubernetes. Para correrlo en local contra kind, abre port-forwards a esos servicios y define en `.env` las variables `KUBEPORTAL_*` (ver `.env.example` y `backend/internal/config/config.go`). Con `KUBEPORTAL_KUBECONFIG` hay que fijar también `KUBEPORTAL_KUBE_CONTEXT=kind-kubeportal`: el backend nunca usa el contexto actual del kubeconfig.
 
 ```bash
-make backend-run   # backend en :8080 (lee .env si existe; ver .env.example)
-make frontend-run  # ng serve en :4200 con proxy de /api, /auth y /healthz al backend
+make backend-run   # backend en :8080 (lee .env si existe)
+make frontend-run  # ng serve en :4200 con proxy de /api (incluido WebSocket), /auth y /healthz al backend
 ```
+
+Con `ng serve`, `KUBEPORTAL_PUBLIC_URL` debe ser `http://localhost:4200` (el realm de kind acepta ese redirect).
+
+Los tests de `internal/store` usan un PostgreSQL desechable si se define `KUBEPORTAL_TEST_DATABASE_URL` (borran y recrean el esquema); sin ella se omiten.
 
 ## Antes de terminar una tarea
 

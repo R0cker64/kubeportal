@@ -1,6 +1,6 @@
 # 0004. Keycloak con patrón BFF (tokens solo en el servidor)
 
-**Estado:** Aceptada
+**Estado:** Aceptada (precisada por el ADR 0009: los tokens se validan y se descartan)
 
 **Contexto:** Se necesita un proveedor de identidad portable a otros clusters. En una SPA, guardar tokens en el navegador los expone a XSS. La guía actual de OAuth para apps de navegador recomienda un Backend-for-Frontend.
 

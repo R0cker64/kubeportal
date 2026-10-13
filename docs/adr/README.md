@@ -14,3 +14,4 @@ Formato: Contexto · Decisión · Consecuencias · Estado.
 | [0006](0006-proxy-loki-prometheus.md) | Proxy a Loki y Prometheus en vez de embeber Grafana | Aceptada |
 | [0007](0007-kind-local-development.md) | Desarrollo local con kind | Aceptada |
 | [0008](0008-csp-nonce-for-angular-styles.md) | Nonce de CSP para los estilos de componentes de Angular | Aceptada |
+| [0009](0009-sessions-without-persisted-tokens.md) | Sesiones del BFF sin tokens persistidos | Aceptada |
