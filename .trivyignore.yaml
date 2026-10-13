@@ -1,0 +1,8 @@
+misconfigurations:
+  - id: KSV-0014
+    paths:
+      - deploy/kind/manifests/keycloak.yaml
+    statement: >-
+      Local-development Keycloak in start-dev mode rebuilds itself under
+      /opt/keycloak on boot and cannot run with a read-only root filesystem.
+      It only runs inside kind and is never part of the KubePortal chart.

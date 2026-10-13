@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated, vendored or local-only paths (all gitignored)"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.angular/''',
+  '''(^|/)dist/''',
+  '''^\.kind/''',
+  '''^backend/bin/''',
+]
