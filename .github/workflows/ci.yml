@@ -28,6 +28,19 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      # Disposable database for the internal/store tests.
+      postgres:
+        image: postgres:18.6-trixie@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+        env:
+          POSTGRES_DB: kubeportal_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["127.0.0.1:5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,6 +54,8 @@ jobs:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: backend
       - name: Test
+        env:
+          KUBEPORTAL_TEST_DATABASE_URL: postgres://postgres@127.0.0.1:5432/kubeportal_test?sslmode=disable
         run: go test -race -count=1 ./...
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION} ./...
@@ -157,6 +172,8 @@ jobs:
         run: |
           for i in $(seq 1 18); do make dev-verify && exit 0; sleep 10; done
           exit 1
+      - name: Team isolation end to end
+        run: make dev-e2e
       - name: Diagnostics
         if: failure()
         run: |
