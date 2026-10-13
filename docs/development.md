@@ -46,6 +46,7 @@ Los tres namespaces de ambiente y `kubeportal` aplican el Pod Security Standard 
 | `catalog-api` | `catalog` | Igual |
 | `catalog-worker` | `catalog` | Termina con error cada 1–3 minutos (reinicios, CrashLoopBackOff) |
 | `legacy-batch` | sin label | Solo debe verlo el administrador |
+| `search-api` | `search` | El equipo `search` no existe al arrancar: lo crea un administrador desde Equipos (criterio de la fase 3) |
 
 ### Usuarios de Keycloak
 
@@ -54,9 +55,10 @@ Los tres namespaces de ambiente y `kubeportal` aplican el Pod Security Standard 
 | `admin` | `kubeportal-admin` |
 | `alice` | `team-payments` |
 | `bob` | `team-catalog` |
+| `dave` | `team-search` (no ve nada hasta que un admin crea el equipo `search` con ese grupo) |
 | `carol` | ninguno (no debe ver nada) |
 
-El mapeo de grupos a equipos de ejemplo (`team-payments` → `payments`, `team-catalog` → `catalog`) se carga con `deploy/kind/manifests/seed-teams.sql` al final de `make dev-deploy`. En la fase 3 se gestionará desde la vista de administración.
+El mapeo de grupos a equipos de ejemplo (`team-payments` → `payments`, `team-catalog` → `catalog`) se carga con `deploy/kind/manifests/seed-teams.sql` al final de `make dev-deploy`. El resto se gestiona desde Equipos en la vista de administración (usuario `admin`).
 
 Para probar el portal en el navegador: `make dev-forward` (los dos port-forwards son necesarios: el login redirige a Keycloak en `localhost:8180`), abrir http://localhost:8080 y entrar con uno de los usuarios (la contraseña es `DEMO_USER_PASSWORD` de `.kind/secrets.env`).
 

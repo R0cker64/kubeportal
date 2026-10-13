@@ -27,6 +27,7 @@ El riesgo principal es que un usuario vea datos de otro equipo. El segundo es qu
 | T10 | Secretos filtrados en el repositorio | `.gitignore`, gitleaks en CI y pre-commit, solo `.env.example` |
 | T11 | Filtración de información en errores | Mensajes genéricos al cliente con id de correlación; detalle solo en logs del servidor |
 | T12 | Tokens o datos sensibles en los logs del backend | Prohibido registrar `Authorization`, cookies y tokens; revisión en code review |
+| T13 | Un no administrador altera el mapeo grupo → equipo o ve datos de administración | Rutas `/api/admin` con comprobación de admin en el servidor (403); consultas de nodos solo con `authz.AdminScope`; CSRF en los cambios; validación estricta del body; registro de cada cambio en el log del backend |
 
 ## Controles de la cadena de CI (cuando exista el código)
 
