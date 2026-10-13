@@ -178,12 +178,13 @@ func (a *api) deleteTeam(w http.ResponseWriter, r *http.Request, p authz.Princip
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// audit records an administrative change. Every value was validated.
+// audit records an administrative change. The team name was validated as an
+// RFC 1123 label; it is sanitized anyway because it comes from the client.
 func (a *api) audit(r *http.Request, p authz.Principal, action string, t authz.TeamInput) {
 	a.log.InfoContext(r.Context(), "admin: "+action,
 		"request_id", RequestID(r.Context()),
 		"admin", sanitizeLogValue(p.Username),
-		"team", t.Name,
+		"team", sanitizeLogValue(t.Name),
 		"groups", len(t.Groups),
 	)
 }
