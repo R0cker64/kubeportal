@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -120,6 +121,20 @@ func (s *statusRecorder) WriteHeader(code int) {
 
 func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter }
 
+// maxLoggedValueLen caps client-controlled values written to the logs.
+const maxLoggedValueLen = 256
+
+// sanitizeLogValue strips line breaks and truncates a client-controlled value
+// so it cannot forge log entries, whatever slog handler is in use.
+func sanitizeLogValue(v string) string {
+	v = strings.ReplaceAll(v, "\n", "")
+	v = strings.ReplaceAll(v, "\r", "")
+	if len(v) > maxLoggedValueLen {
+		v = v[:maxLoggedValueLen]
+	}
+	return v
+}
+
 // withAccessLog logs method, path, status and latency. It deliberately omits
 // query strings and headers, which may carry search text, cookies or tokens.
 func withAccessLog(log *slog.Logger, next http.Handler) http.Handler {
@@ -130,7 +145,7 @@ func withAccessLog(log *slog.Logger, next http.Handler) http.Handler {
 		log.InfoContext(r.Context(), "http request",
 			"request_id", RequestID(r.Context()),
 			"method", r.Method,
-			"path", r.URL.Path,
+			"path", sanitizeLogValue(r.URL.Path),
 			"status", rec.status,
 			"duration_ms", time.Since(start).Milliseconds(),
 		)

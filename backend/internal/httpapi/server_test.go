@@ -169,3 +169,13 @@ func TestIndexGetsPerRequestNonce(t *testing.T) {
 		t.Fatal("placeholder leaked")
 	}
 }
+
+func TestSanitizeLogValue(t *testing.T) {
+	got := sanitizeLogValue("/a\r\n{\"level\":\"error\"}")
+	if strings.ContainsAny(got, "\r\n") {
+		t.Fatalf("line breaks not removed: %q", got)
+	}
+	if got := sanitizeLogValue(strings.Repeat("x", 1000)); len(got) != maxLoggedValueLen {
+		t.Fatalf("len = %d", len(got))
+	}
+}
