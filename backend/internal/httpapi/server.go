@@ -51,6 +51,13 @@ func NewHandler(cfg *config.Config, log *slog.Logger, static fs.FS, deps Deps) h
 	mux.HandleFunc("GET /api/services/{env}/{kind}/{name}/logs", a.requireSession(a.serviceLogs))
 	mux.HandleFunc("GET /api/services/{env}/{kind}/{name}/logs/live", a.requireSession(a.serviceLogsLive))
 
+	mux.HandleFunc("GET /api/admin/teams", a.requireAdmin(a.listTeams))
+	mux.HandleFunc("POST /api/admin/teams", a.requireAdmin(a.createTeam))
+	mux.HandleFunc("PUT /api/admin/teams/{name}", a.requireAdmin(a.updateTeam))
+	mux.HandleFunc("DELETE /api/admin/teams/{name}", a.requireAdmin(a.deleteTeam))
+	mux.HandleFunc("GET /api/admin/nodes", a.requireAdmin(a.listNodes))
+	mux.HandleFunc("GET /api/admin/workloads/unassigned", a.requireAdmin(a.unassignedWorkloads))
+
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusNotFound)
 	})

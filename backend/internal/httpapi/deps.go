@@ -37,6 +37,8 @@ type WorkloadSource interface {
 	Warnings(w k8s.Workload, pods []*corev1.Pod, limit int) []k8s.Event
 	Subscribe() (<-chan struct{}, func())
 	Synced() bool
+	// Nodes is admin only.
+	Nodes() []k8s.Node
 }
 
 // LogSource queries Loki (implemented by logs.Client).
@@ -48,6 +50,16 @@ type LogSource interface {
 // MetricSource queries Prometheus (implemented by metrics.Client).
 type MetricSource interface {
 	Workload(ctx context.Context, sel authz.PodSelector, r authz.TimeRange) ([]metrics.Series, error)
+	Nodes(ctx context.Context, scope authz.AdminScope) (map[string]metrics.NodeUsage, error)
+}
+
+// TeamAdmin manages teams and their group mapping (implemented by
+// store.Store). Only administrators reach it.
+type TeamAdmin interface {
+	ListTeams(ctx context.Context) ([]store.Team, error)
+	CreateTeam(ctx context.Context, t store.Team) error
+	UpdateTeam(ctx context.Context, t store.Team) error
+	DeleteTeam(ctx context.Context, name string) error
 }
 
 // Deps are the collaborators of the API handlers.
@@ -57,6 +69,7 @@ type Deps struct {
 	Workloads WorkloadSource
 	Logs      LogSource
 	Metrics   MetricSource
+	Teams     TeamAdmin
 	// Ready reports whether dependencies needed to serve requests are up.
 	Ready func(ctx context.Context) error
 }
