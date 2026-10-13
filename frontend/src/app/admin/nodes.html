@@ -1,0 +1,75 @@
+<h1>Nodos</h1>
+@if (!usageAvailable()) {
+  <p class="error">No se pudo consultar Prometheus: se muestran los nodos sin uso real.</p>
+}
+@if (loadError()) {
+  <p class="error">No se pudieron cargar los nodos.</p>
+}
+@if (nodes(); as list) {
+  <section class="card">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Nodo</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Pool / zona</th>
+          <th scope="col">CPU</th>
+          <th scope="col">Memoria</th>
+          <th scope="col">Pods</th>
+          <th scope="col">Kubelet</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (n of list; track n.name) {
+          <tr>
+            <td>
+              <code>{{ n.name }}</code>
+              @for (r of n.roles; track r) {
+                <span class="tag">{{ r }}</span>
+              }
+              <div class="muted">desde {{ n.createdAt | date: 'shortDate' }}</div>
+            </td>
+            <td>
+              <span class="status" [class]="n.ready ? 'healthy' : 'down'">{{ n.ready ? 'Listo' : 'No listo' }}</span>
+              @if (n.unschedulable) {
+                <div class="muted">Sin programación (cordon)</div>
+              }
+              @if (n.problems.length) {
+                <ul class="problems">
+                  @for (p of n.problems; track p.type) {
+                    <li>{{ p.type }}={{ p.status }} @if (p.reason) { ({{ p.reason }}) }</li>
+                  }
+                </ul>
+              }
+            </td>
+            <td>{{ n.pool || '—' }}<div class="muted">{{ n.zone || '—' }}</div></td>
+            <td>
+              <div class="usage">
+                <meter min="0" max="1" [value]="ratio(n.usage?.cpu, n.allocatableCpu)"
+                  [attr.aria-label]="'Uso de CPU de ' + n.name"></meter>
+                <span>uso {{ n.usage ? format(n.usage.cpu, 'cores') : '—' }}</span>
+                <span>requests {{ n.usage ? format(n.usage.cpuRequests, 'cores') : '—' }}</span>
+                <span class="muted">asignable {{ format(n.allocatableCpu, 'cores') }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="usage">
+                <meter min="0" max="1" [value]="ratio(n.usage?.memory, n.allocatableMemory)"
+                  [attr.aria-label]="'Uso de memoria de ' + n.name"></meter>
+                <span>uso {{ n.usage ? format(n.usage.memory, 'bytes') : '—' }}</span>
+                <span>requests {{ n.usage ? format(n.usage.memoryRequests, 'bytes') : '—' }}</span>
+                <span class="muted">asignable {{ format(n.allocatableMemory, 'bytes') }}</span>
+              </div>
+            </td>
+            <td>{{ n.usage?.pods ?? '—' }} / {{ n.allocatablePods }}</td>
+            <td>{{ n.kubeletVersion }}</td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="muted">Sin nodos.</td></tr>
+        }
+      </tbody>
+    </table>
+  </section>
+} @else if (!loadError()) {
+  <p class="muted">Cargando…</p>
+}

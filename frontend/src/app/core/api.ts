@@ -6,9 +6,12 @@ import {
   LogsResponse,
   Me,
   MetricsResponse,
+  NodeView,
   ServiceDetail,
   ServiceRef,
   ServiceSummary,
+  Team,
+  TeamInput,
 } from './models';
 import { openSocket } from './socket';
 
@@ -71,5 +74,33 @@ export class Api {
   liveLogs(ref: ServiceRef, query: Pick<LogQuery, 'q' | 'level'>): Observable<{ lines: LogLine[] }> {
     const qs = params({ ...query }).toString();
     return openSocket<{ lines: LogLine[] }>(servicePath(ref) + '/logs/live' + (qs ? '?' + qs : ''));
+  }
+
+  // --- Administration (the backend answers 403 to non-admins) ---
+
+  teams(): Observable<{ teams: Team[]; adminGroup: string }> {
+    return this.http.get<{ teams: Team[]; adminGroup: string }>('/api/admin/teams');
+  }
+
+  createTeam(team: TeamInput): Observable<Team> {
+    return this.http.post<Team>('/api/admin/teams', team);
+  }
+
+  updateTeam(name: string, team: TeamInput): Observable<Team> {
+    return this.http.put<Team>(`/api/admin/teams/${encodeURIComponent(name)}`, team);
+  }
+
+  deleteTeam(name: string): Observable<void> {
+    return this.http.delete<void>(`/api/admin/teams/${encodeURIComponent(name)}`);
+  }
+
+  nodes(): Observable<{ nodes: NodeView[]; usageAvailable: boolean }> {
+    return this.http.get<{ nodes: NodeView[]; usageAvailable: boolean }>('/api/admin/nodes');
+  }
+
+  unassigned(): Observable<{ unlabelled: ServiceSummary[]; unknownTeam: ServiceSummary[] }> {
+    return this.http.get<{ unlabelled: ServiceSummary[]; unknownTeam: ServiceSummary[] }>(
+      '/api/admin/workloads/unassigned',
+    );
   }
 }
