@@ -25,3 +25,142 @@ body {
   background: var(--kp-bg);
   color: var(--kp-text);
 }
+
+:root {
+  --kp-muted: #5c6670;
+  --kp-accent: #2f6fde;
+  --kp-ok: #1f8a4c;
+  --kp-warn: #b7791f;
+  --kp-bad: #c53030;
+  --kp-code-bg: #f0f2f5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --kp-muted: #9aa4af;
+    --kp-accent: #6d9cf0;
+    --kp-ok: #48bb78;
+    --kp-warn: #ecc94b;
+    --kp-bad: #fc8181;
+    --kp-code-bg: #111418;
+  }
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0 0 0.75rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+a {
+  color: var(--kp-accent);
+}
+
+.card {
+  background: var(--kp-surface);
+  border: 1px solid var(--kp-border);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+}
+
+.muted {
+  color: var(--kp-muted);
+}
+
+.error {
+  color: var(--kp-bad);
+}
+
+.button {
+  font: inherit;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--kp-border);
+  border-radius: 4px;
+  background: var(--kp-surface);
+  color: inherit;
+  cursor: pointer;
+}
+
+.button.primary {
+  background: var(--kp-accent);
+  border-color: var(--kp-accent);
+  color: #fff;
+}
+
+.button[aria-pressed='true'] {
+  border-color: var(--kp-accent);
+  color: var(--kp-accent);
+  font-weight: 600;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0 0.4rem;
+  border: 1px solid var(--kp-border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.status {
+  display: inline-block;
+  min-width: 5.5rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  color: #fff;
+}
+
+.status.healthy {
+  background: var(--kp-ok);
+}
+
+.status.degraded {
+  background: var(--kp-warn);
+  color: #1c2127;
+}
+
+.status.down {
+  background: var(--kp-bad);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--kp-border);
+  vertical-align: top;
+}
+
+th {
+  font-size: 0.85rem;
+  color: var(--kp-muted);
+  font-weight: 600;
+}
+
+input,
+select {
+  font: inherit;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--kp-border);
+  border-radius: 4px;
+  background: var(--kp-surface);
+  color: inherit;
+}
+
+code {
+  font-family: ui-monospace, monospace;
+  background: var(--kp-code-bg);
+  padding: 0 0.25rem;
+  border-radius: 3px;
+}

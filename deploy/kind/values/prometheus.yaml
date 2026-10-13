@@ -4,9 +4,10 @@ prometheus-pushgateway:
   enabled: false
 
 kube-state-metrics:
-  # Expose the `team` label as label_team (docs/architecture.md prerequisites).
+  # Expose the `team` and app labels as label_team and
+  # label_app_kubernetes_io_name (docs/architecture.md prerequisites).
   metricLabelsAllowlist:
-    - pods=[team]
+    - pods=[team,app.kubernetes.io/name]
     - deployments=[team]
   resources:
     requests: { cpu: 10m, memory: 64Mi }

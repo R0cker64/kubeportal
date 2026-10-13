@@ -1,6 +1,39 @@
 <header class="topbar">
-  <span class="brand">{{ productName }}</span>
+  <a class="brand" routerLink="/">{{ productName }}</a>
+  @if (auth.me(); as me) {
+    <span class="spacer"></span>
+    <span class="user">
+      {{ me.username }}
+      @if (me.admin) {
+        <span class="tag">admin</span>
+      }
+      @for (team of me.teams; track team) {
+        <span class="tag">{{ team }}</span>
+      }
+    </span>
+    <button type="button" class="button" (click)="auth.logout()">Cerrar sesión</button>
+  }
 </header>
 <main class="content">
-  <router-outlet />
+  @switch (auth.state()) {
+    @case ('loading') {
+      <p class="muted">Cargando…</p>
+    }
+    @case ('anonymous') {
+      <app-login />
+    }
+    @case ('error') {
+      <p class="error">No se pudo contactar con el servidor. Inténtalo de nuevo en unos segundos.</p>
+    }
+    @default {
+      @if (auth.me()?.teams?.length || auth.me()?.admin) {
+        <router-outlet />
+      } @else {
+        <section class="card">
+          <h1>Sin equipo asignado</h1>
+          <p>Tu usuario no pertenece a ningún equipo del portal. Pide al administrador que añada tu grupo.</p>
+        </section>
+      }
+    }
+  }
 </main>

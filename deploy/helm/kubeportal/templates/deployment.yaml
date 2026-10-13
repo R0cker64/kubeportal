@@ -47,9 +47,57 @@ spec:
               value: {{ required "config.environments is required" .Values.config.environments | quote }}
             - name: KUBEPORTAL_LOG_LEVEL
               value: {{ .Values.config.logLevel | quote }}
+            - name: KUBEPORTAL_ADMIN_GROUP
+              value: {{ required "config.adminGroup is required" .Values.config.adminGroup | quote }}
+            - name: KUBEPORTAL_OIDC_ISSUER_URL
+              value: {{ required "config.oidc.issuerURL is required" .Values.config.oidc.issuerURL | quote }}
+            {{- with .Values.config.oidc.discoveryURL }}
+            - name: KUBEPORTAL_OIDC_DISCOVERY_URL
+              value: {{ . | quote }}
+            {{- end }}
+            - name: KUBEPORTAL_OIDC_CLIENT_ID
+              value: {{ required "config.oidc.clientID is required" .Values.config.oidc.clientID | quote }}
+            - name: KUBEPORTAL_LOKI_URL
+              value: {{ required "config.lokiURL is required" .Values.config.lokiURL | quote }}
+            - name: KUBEPORTAL_PROMETHEUS_URL
+              value: {{ required "config.prometheusURL is required" .Values.config.prometheusURL | quote }}
+            - name: KUBEPORTAL_SESSION_TTL
+              value: {{ .Values.config.sessionTTL | quote }}
+            - name: KUBEPORTAL_SESSION_IDLE_TIMEOUT
+              value: {{ .Values.config.sessionIdleTimeout | quote }}
+            - name: KUBEPORTAL_UPSTREAM_TIMEOUT
+              value: {{ .Values.config.upstreamTimeout | quote }}
+            - name: KUBEPORTAL_LOG_MAX_RANGE
+              value: {{ .Values.config.logMaxRange | quote }}
+            - name: KUBEPORTAL_LOG_MAX_LINES
+              value: {{ .Values.config.logMaxLines | quote }}
+            - name: KUBEPORTAL_LOG_MAX_SEARCH_LEN
+              value: {{ .Values.config.logMaxSearchLen | quote }}
+            - name: KUBEPORTAL_LIVE_TAILS_PER_USER
+              value: {{ .Values.config.liveTailsPerUser | quote }}
+            - name: KUBEPORTAL_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.oidcClientSecret.name }}
+                  key: {{ .Values.secrets.oidcClientSecret.key }}
+            - name: KUBEPORTAL_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.databaseURL.name }}
+                  key: {{ .Values.secrets.databaseURL.key }}
+            - name: KUBEPORTAL_SESSION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.sessionKey.name }}
+                  key: {{ .Values.secrets.sessionKey.key }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
+          startupProbe:
+            # Informers and migrations may take a while on first start.
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+            failureThreshold: 36
           readinessProbe:
             httpGet: { path: /readyz, port: http }
             periodSeconds: 5

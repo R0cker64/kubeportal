@@ -1,0 +1,115 @@
+<p><a routerLink="/">← Servicios</a></p>
+
+@if (notFound() && !detail()) {
+  <section class="card">
+    <h1>Servicio no encontrado</h1>
+    <p>No existe o no pertenece a tus equipos.</p>
+  </section>
+} @else if (detail(); as d) {
+  <header class="head">
+    <h1>{{ d.name }}</h1>
+    <span class="status" [class]="d.health.status">{{ statusLabels[d.health.status] }}</span>
+    <span class="tag">{{ d.environment }}</span>
+    <span class="tag">{{ kindLabels[d.kind] }}</span>
+    @if (d.team) {
+      <span class="tag">equipo {{ d.team }}</span>
+    } @else {
+      <span class="tag warn">sin label team</span>
+    }
+  </header>
+
+  <section class="card summary">
+    <div><span class="muted">Réplicas listas</span> <strong>{{ d.health.ready }}/{{ d.health.desired }}</strong></div>
+    <div><span class="muted">Reinicios</span> <strong>{{ d.health.restarts }}</strong></div>
+    <div><span class="muted">Creado</span> {{ d.createdAt | date: 'medium' }}</div>
+    @if (d.health.reasons.length) {
+      <ul class="reasons">
+        @for (r of d.health.reasons; track r) {
+          <li>{{ reasonLabel(r) }}</li>
+        }
+      </ul>
+    }
+  </section>
+
+  <h2>Recursos</h2>
+  <div class="ranges">
+    @for (r of ranges; track r) {
+      <button type="button" class="button" [attr.aria-pressed]="range() === r" (click)="range.set(r)">{{ r }}</button>
+    }
+  </div>
+  @if (metricsError()) {
+    <p class="error">No se pudieron cargar las métricas.</p>
+  } @else if (metrics()) {
+    <div class="charts">
+      <section class="card">
+        <app-metric-chart title="CPU" unit="cores" [lines]="cpu()" [start]="window().start" [end]="window().end" />
+      </section>
+      <section class="card">
+        <app-metric-chart title="Memoria" unit="bytes" [lines]="memory()" [start]="window().start" [end]="window().end" />
+      </section>
+    </div>
+  } @else {
+    <p class="muted">Cargando métricas…</p>
+  }
+
+  <h2>Pods</h2>
+  <section class="card">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Pod</th>
+          <th scope="col">Fase</th>
+          <th scope="col">Listo</th>
+          <th scope="col">Reinicios</th>
+          <th scope="col">Contenedores</th>
+          <th scope="col">Nodo</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of d.pods; track p.name) {
+          <tr>
+            <td><code>{{ p.name }}</code></td>
+            <td>{{ p.phase }}</td>
+            <td>{{ p.ready ? 'Sí' : 'No' }}</td>
+            <td>{{ p.restarts }}</td>
+            <td>
+              @for (c of p.containers; track c.name) {
+                <div>
+                  {{ c.name }}: {{ c.state }}
+                  @if (c.reason) {
+                    ({{ c.reason }})
+                  }
+                  @if (c.lastTerminationReason) {
+                    <span class="muted">· último fin: {{ c.lastTerminationReason }} {{ c.lastTerminatedAt | date: 'short' }}</span>
+                  }
+                </div>
+              }
+            </td>
+            <td>{{ p.node || '—' }}</td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6" class="muted">Sin pods.</td></tr>
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <h2>Eventos de advertencia</h2>
+  <section class="card">
+    @for (e of d.events; track $index) {
+      <div class="event">
+        <span class="muted">{{ e.lastSeen | date: 'short' }}</span>
+        <strong>{{ e.reason }}</strong>
+        <span class="muted">{{ e.object }} ×{{ e.count }}</span>
+        <div>{{ e.message }}</div>
+      </div>
+    } @empty {
+      <p class="muted">Sin eventos de advertencia recientes.</p>
+    }
+  </section>
+
+  <h2>Logs</h2>
+  <app-log-viewer [service]="ref()" />
+} @else {
+  <p class="muted">Cargando…</p>
+}

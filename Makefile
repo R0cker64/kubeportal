@@ -30,6 +30,14 @@ dev-verify: ## Check that Loki and kube-state-metrics expose the team label
 dev-deploy: ## Build the image and install the chart into kind
 	deploy/kind/deploy-app.sh
 
+.PHONY: dev-e2e
+dev-e2e: ## Log in as each demo user and check team isolation through the portal
+	deploy/kind/e2e.sh
+
+.PHONY: dev-forward
+dev-forward: ## Port-forward the portal (:8080) and Keycloak (:8180) together
+	deploy/kind/forward-all.sh
+
 .PHONY: dev-keycloak
 dev-keycloak: ## Port-forward Keycloak to http://localhost:8180
 	deploy/kind/port-forward.sh keycloak keycloak 8180:8080
