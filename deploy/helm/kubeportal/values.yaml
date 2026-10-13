@@ -8,12 +8,40 @@ image:
 
 imagePullSecrets: []
 
+# Defaults match the kind environment (deploy/kind); override them per cluster.
 config:
   # Public URL users open in the browser (with port-forward: http://localhost:8080).
   publicURL: http://localhost:8080
   # Namespaces that represent environments, comma separated.
   environments: dev,staging,prod
   logLevel: info
+  # Keycloak group whose members are administrators.
+  adminGroup: kubeportal-admin
+  oidc:
+    # Public issuer, validated against the `iss` claim.
+    issuerURL: http://localhost:8180/realms/kubeportal
+    # Where the backend fetches metadata and keys (in-cluster Service).
+    # Empty means the same as issuerURL.
+    discoveryURL: http://keycloak.keycloak.svc:8080/realms/kubeportal
+    clientID: kubeportal
+  lokiURL: http://loki-gateway.monitoring.svc
+  prometheusURL: http://prometheus-server.monitoring.svc
+  sessionTTL: 8h
+  sessionIdleTimeout: 1h
+  upstreamTimeout: 10s
+  # Limits on log queries (docs/security-model.md, T8).
+  logMaxRange: 168h
+  logMaxLines: 1000
+  logMaxSearchLen: 256
+  liveTailsPerUser: 3
+
+# Existing Secrets the chart references; it never creates or reads them.
+secrets:
+  oidcClientSecret: { name: kubeportal-oidc, key: client-secret }
+  # PostgreSQL URL, e.g. postgres://user:pass@host:5432/db?sslmode=require
+  databaseURL: { name: kubeportal-db, key: url }
+  # 32 random bytes as hex (openssl rand -hex 32).
+  sessionKey: { name: kubeportal-session, key: key }
 
 service:
   port: 8080
