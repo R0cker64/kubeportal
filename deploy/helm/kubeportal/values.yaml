@@ -26,6 +26,9 @@ config:
     clientID: kubeportal
   lokiURL: http://loki-gateway.monitoring.svc
   prometheusURL: http://prometheus-server.monitoring.svc
+  # Label with the node name on cAdvisor series: "instance" in the
+  # prometheus-community chart, "node" in kube-prometheus-stack.
+  cadvisorNodeLabel: instance
   sessionTTL: 8h
   sessionIdleTimeout: 1h
   upstreamTimeout: 10s

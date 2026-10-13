@@ -9,7 +9,8 @@
   "groups": [
     { "name": "kubeportal-admin" },
     { "name": "team-payments" },
-    { "name": "team-catalog" }
+    { "name": "team-catalog" },
+    { "name": "team-search" }
   ],
   "clientScopes": [
     {
@@ -104,6 +105,16 @@
       "email": "bob@kubeportal.local",
       "emailVerified": true,
       "groups": ["team-catalog"],
+      "credentials": [{ "type": "password", "value": "${DEMO_USER_PASSWORD}", "temporary": false }]
+    },
+    {
+      "username": "dave",
+      "enabled": true,
+      "firstName": "Dave",
+      "lastName": "Search",
+      "email": "dave@kubeportal.local",
+      "emailVerified": true,
+      "groups": ["team-search"],
       "credentials": [{ "type": "password", "value": "${DEMO_USER_PASSWORD}", "temporary": false }]
     },
     {
