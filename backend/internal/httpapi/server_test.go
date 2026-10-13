@@ -31,7 +31,7 @@ func do(t *testing.T, h http.Handler, method, target string, body io.Reader) *ht
 }
 
 func TestSecurityHeadersOnEveryResponse(t *testing.T) {
-	h := NewHandler(testConfig("http://localhost:8080"), testLogger(), nil)
+	h := NewHandler(testConfig("http://localhost:8080"), testLogger(), nil, Deps{})
 
 	for _, target := range []string{"/healthz", "/api/unknown", "/nope"} {
 		rec := do(t, h, http.MethodGet, target, nil)
@@ -55,14 +55,14 @@ func TestSecurityHeadersOnEveryResponse(t *testing.T) {
 }
 
 func TestHSTSWithTLS(t *testing.T) {
-	h := NewHandler(testConfig("https://portal.example.com"), testLogger(), nil)
+	h := NewHandler(testConfig("https://portal.example.com"), testLogger(), nil, Deps{})
 	if do(t, h, http.MethodGet, "/healthz", nil).Header().Get("Strict-Transport-Security") == "" {
 		t.Fatal("expected HSTS header when public URL uses https")
 	}
 }
 
 func TestErrorsAreGenericWithCorrelationID(t *testing.T) {
-	h := NewHandler(testConfig("http://localhost:8080"), testLogger(), nil)
+	h := NewHandler(testConfig("http://localhost:8080"), testLogger(), nil, Deps{})
 	rec := do(t, h, http.MethodGet, "/api/unknown", nil)
 
 	if rec.Code != http.StatusNotFound {
@@ -78,7 +78,7 @@ func TestErrorsAreGenericWithCorrelationID(t *testing.T) {
 }
 
 func TestIncomingRequestIDIsIgnored(t *testing.T) {
-	h := NewHandler(testConfig("http://localhost:8080"), testLogger(), nil)
+	h := NewHandler(testConfig("http://localhost:8080"), testLogger(), nil, Deps{})
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/healthz", nil)
 	req.Header.Set(requestIDHeader, "injected\nvalue")
 	rec := httptest.NewRecorder()
@@ -117,7 +117,7 @@ func TestSPAHandler(t *testing.T) {
 		"main-ABC.js":     {Data: []byte("console.log(1)")},
 		"assets/logo.svg": {Data: []byte("<svg/>")},
 	}
-	h := NewHandler(testConfig("http://localhost:8080"), testLogger(), static)
+	h := NewHandler(testConfig("http://localhost:8080"), testLogger(), static, Deps{})
 
 	cases := []struct {
 		target string
@@ -144,7 +144,7 @@ func TestSPAHandler(t *testing.T) {
 
 func TestIndexGetsPerRequestNonce(t *testing.T) {
 	static := fstest.MapFS{"index.html": {Data: []byte(`<app-root ngCspNonce="__CSP_NONCE__"></app-root>`)}}
-	h := NewHandler(testConfig("http://localhost:8080"), testLogger(), static)
+	h := NewHandler(testConfig("http://localhost:8080"), testLogger(), static, Deps{})
 
 	first := do(t, h, http.MethodGet, "/", nil)
 	second := do(t, h, http.MethodGet, "/", nil)

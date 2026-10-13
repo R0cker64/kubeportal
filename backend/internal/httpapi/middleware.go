@@ -37,6 +37,7 @@ type ctxKey int
 const (
 	requestIDKey ctxKey = iota
 	cspNonceKey
+	principalKey
 )
 
 // RequestID returns the correlation id assigned to the request, if any.
