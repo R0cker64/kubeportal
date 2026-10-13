@@ -1,0 +1,51 @@
+{{- if .Values.networkPolicy.enabled }}
+# Default deny for the backend; only the flows in docs/architecture.md are open.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "kubeportal.fullname" . }}
+  labels:
+    {{- include "kubeportal.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "kubeportal.selectorLabels" . | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - ports:
+        - port: http
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    # Kubernetes API server
+    - to:
+        {{- range .Values.networkPolicy.apiServer.cidrs }}
+        - ipBlock:
+            cidr: {{ . }}
+        {{- end }}
+      ports:
+        {{- range .Values.networkPolicy.apiServer.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+    {{- range $name, $dep := .Values.networkPolicy.egress }}
+    # {{ $name }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ default $.Release.Namespace $dep.namespace }}
+          podSelector:
+            matchLabels:
+              {{- toYaml $dep.podLabels | nindent 14 }}
+      ports:
+        {{- range $dep.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+    {{- end }}
+{{- end }}

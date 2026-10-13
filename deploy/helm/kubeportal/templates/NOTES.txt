@@ -1,0 +1,7 @@
+KubePortal is installed in namespace {{ .Release.Namespace }}.
+
+Open it with:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "kubeportal.fullname" . }} 8080:{{ .Values.service.port }}
+
+then browse to {{ .Values.config.publicURL }}

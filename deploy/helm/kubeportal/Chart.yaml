@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kubeportal
+description: Self-service Kubernetes portal where each team sees only the logs and health of its own services.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.30.0-0"
+home: https://github.com/R0cker64/kubeportal
+sources:
+  - https://github.com/R0cker64/kubeportal

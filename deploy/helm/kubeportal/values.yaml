@@ -1,0 +1,63 @@
+image:
+  repository: ghcr.io/r0cker64/kubeportal
+  # Defaults to the chart appVersion.
+  tag: ""
+  # When set, the image is referenced by digest (recommended).
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+config:
+  # Public URL users open in the browser (with port-forward: http://localhost:8080).
+  publicURL: http://localhost:8080
+  # Namespaces that represent environments, comma separated.
+  environments: dev,staging,prod
+  logLevel: info
+
+service:
+  port: 8080
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+serviceAccount:
+  # The ServiceAccount is read-only (get/list/watch) and has no access to
+  # Secrets or ConfigMaps (ADR 0005). Do not widen it without a new ADR.
+  name: ""
+
+networkPolicy:
+  enabled: true
+  # Egress to the Kubernetes API server. Narrow these CIDRs to the real API
+  # server endpoints in each cluster.
+  apiServer:
+    cidrs: ["0.0.0.0/0"]
+    ports: [443, 6443]
+  # Selectors for the dependencies the backend is allowed to reach.
+  egress:
+    loki:
+      namespace: monitoring
+      podLabels: { app.kubernetes.io/name: loki }
+      ports: [80, 8080, 3100]
+    prometheus:
+      namespace: monitoring
+      podLabels: { app.kubernetes.io/name: prometheus }
+      ports: [80, 9090]
+    keycloak:
+      namespace: keycloak
+      podLabels: { app.kubernetes.io/name: keycloak }
+      ports: [8080]
+    postgres:
+      namespace: ""  # empty = release namespace
+      podLabels: { app.kubernetes.io/name: postgres }
+      ports: [5432]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}

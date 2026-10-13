@@ -1,0 +1,13 @@
+**/node_modules
+**/.angular
+**/dist
+backend/bin
+.git
+.github
+.claude
+docs
+deploy
+.env
+.env.*
+**/*.pem
+**/*.key
