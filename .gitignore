@@ -1,0 +1,43 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+kubeconfig*
+*.kubeconfig
+secrets/
+**/values-secret*.yaml
+
+# Go
+backend/bin/
+*.test
+*.out
+coverage.*
+
+# Node / Angular
+node_modules/
+frontend/dist/
+frontend/.angular/
+npm-debug.log*
+
+# Build / scan artifacts
+dist/
+sbom*.json
+trivy-results*
+
+# Editors / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Local kind environment (kubeconfig and generated credentials)
+.kind/
