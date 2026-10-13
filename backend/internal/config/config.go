@@ -3,12 +3,14 @@
 package config
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -29,6 +31,39 @@ type Config struct {
 	WriteTimeout      time.Duration
 	IdleTimeout       time.Duration
 	ShutdownTimeout   time.Duration
+
+	// OIDC (Keycloak). IssuerURL is the public issuer validated in `iss`;
+	// DiscoveryURL is where the backend fetches metadata and keys, e.g. the
+	// in-cluster Service URL. It defaults to IssuerURL.
+	OIDCIssuerURL    *url.URL
+	OIDCDiscoveryURL *url.URL
+	OIDCClientID     string
+	OIDCClientSecret string
+	AdminGroup       string
+
+	// SessionKey encrypts the short-lived login state cookie (AES-256-GCM).
+	SessionKey         []byte
+	SessionTTL         time.Duration
+	SessionIdleTimeout time.Duration
+
+	DatabaseURL string
+
+	// Kubeconfig and KubeContext are for running outside the cluster only;
+	// when Kubeconfig is empty the in-cluster ServiceAccount is used.
+	Kubeconfig  string
+	KubeContext string
+
+	LokiURL       *url.URL
+	PrometheusURL *url.URL
+	// UpstreamTimeout bounds every call to Kubernetes, Loki, Prometheus,
+	// Keycloak and PostgreSQL.
+	UpstreamTimeout time.Duration
+
+	LogMaxRange      time.Duration
+	LogMaxLines      int
+	LogMaxSearchLen  int
+	LiveTailsPerUser int
+	MetricsMaxRange  time.Duration
 }
 
 // k8sNameRe matches an RFC 1123 label (max length checked separately).
@@ -59,6 +94,39 @@ func LoadFrom(lookup func(string) (string, bool)) (*Config, error) {
 	cfg.LogLevel = l.logLevel("LOG_LEVEL", slog.LevelInfo)
 	cfg.Environments = l.environments("ENVIRONMENTS")
 
+	cfg.OIDCIssuerURL = l.url("OIDC_ISSUER_URL")
+	cfg.OIDCDiscoveryURL = cfg.OIDCIssuerURL
+	if _, ok := l.raw("OIDC_DISCOVERY_URL"); ok {
+		cfg.OIDCDiscoveryURL = l.url("OIDC_DISCOVERY_URL")
+	}
+	cfg.OIDCClientID = l.required("OIDC_CLIENT_ID")
+	cfg.OIDCClientSecret = l.required("OIDC_CLIENT_SECRET")
+	cfg.AdminGroup = l.str("ADMIN_GROUP", "kubeportal-admin")
+
+	cfg.SessionKey = l.hexKey("SESSION_KEY", 32)
+	cfg.SessionTTL = l.duration("SESSION_TTL", 8*time.Hour)
+	cfg.SessionIdleTimeout = l.duration("SESSION_IDLE_TIMEOUT", time.Hour)
+
+	cfg.DatabaseURL = l.required("DATABASE_URL")
+
+	cfg.Kubeconfig = l.str("KUBECONFIG", "")
+	cfg.KubeContext = l.str("KUBE_CONTEXT", "")
+	if cfg.Kubeconfig != "" && cfg.KubeContext == "" {
+		// Never fall back to the kubeconfig's current context, which may be a
+		// real cluster (CLAUDE.md).
+		l.fail("KUBE_CONTEXT", "is required when KUBEPORTAL_KUBECONFIG is set")
+	}
+
+	cfg.LokiURL = l.url("LOKI_URL")
+	cfg.PrometheusURL = l.url("PROMETHEUS_URL")
+	cfg.UpstreamTimeout = l.duration("UPSTREAM_TIMEOUT", 10*time.Second)
+
+	cfg.LogMaxRange = l.duration("LOG_MAX_RANGE", 7*24*time.Hour)
+	cfg.LogMaxLines = l.positiveInt("LOG_MAX_LINES", 1000)
+	cfg.LogMaxSearchLen = l.positiveInt("LOG_MAX_SEARCH_LEN", 256)
+	cfg.LiveTailsPerUser = l.positiveInt("LIVE_TAILS_PER_USER", 3)
+	cfg.MetricsMaxRange = l.duration("METRICS_MAX_RANGE", 7*24*time.Hour)
+
 	if err := errors.Join(l.errs...); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
@@ -85,6 +153,43 @@ func (l *loader) str(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func (l *loader) required(key string) string {
+	v, ok := l.raw(key)
+	if !ok {
+		l.fail(key, "is required")
+	}
+	return v
+}
+
+func (l *loader) positiveInt(key string, def int) int {
+	v, ok := l.raw(key)
+	if !ok {
+		return def
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		l.fail(key, "must be a positive integer")
+		return def
+	}
+	return n
+}
+
+// hexKey reads a hex-encoded key of exactly size bytes. The value is never
+// included in error messages.
+func (l *loader) hexKey(key string, size int) []byte {
+	v, ok := l.raw(key)
+	if !ok {
+		l.fail(key, "is required")
+		return nil
+	}
+	b, err := hex.DecodeString(v)
+	if err != nil || len(b) != size {
+		l.fail(key, "must be %d bytes encoded as hex", size)
+		return nil
+	}
+	return b
 }
 
 func (l *loader) duration(key string, def time.Duration) time.Duration {
