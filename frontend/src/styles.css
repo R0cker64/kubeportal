@@ -1,0 +1,27 @@
+:root {
+  color-scheme: light dark;
+  --kp-bg: #f7f8fa;
+  --kp-surface: #ffffff;
+  --kp-border: #d9dde3;
+  --kp-text: #1c2127;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --kp-bg: #14171c;
+    --kp-surface: #1c2027;
+    --kp-border: #2e343d;
+    --kp-text: #e6e9ee;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: var(--kp-bg);
+  color: var(--kp-text);
+}

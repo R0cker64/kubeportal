@@ -1,0 +1,23 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  height: 3rem;
+  padding: 0 1rem;
+  background: var(--kp-surface);
+  border-bottom: 1px solid var(--kp-border);
+}
+
+.brand {
+  font-weight: 600;
+}
+
+.content {
+  flex: 1;
+  padding: 1rem;
+}
