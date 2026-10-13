@@ -92,3 +92,51 @@ export interface ServiceRef {
   kind: string;
   name: string;
 }
+
+// --- Administration (admin only) ---
+
+export interface Team {
+  name: string;
+  displayName: string;
+  groups: string[];
+  createdAt: string;
+  workloads: number;
+}
+
+export interface TeamInput {
+  name?: string;
+  displayName: string;
+  groups: string[];
+}
+
+export interface NodeCondition {
+  type: string;
+  status: string;
+  reason?: string;
+  message?: string;
+  since: string;
+}
+
+export interface NodeUsage {
+  cpu: number;
+  memory: number;
+  cpuRequests: number;
+  memoryRequests: number;
+  pods: number;
+}
+
+export interface NodeView {
+  name: string;
+  ready: boolean;
+  unschedulable: boolean;
+  roles: string[];
+  pool?: string;
+  zone?: string;
+  kubeletVersion: string;
+  createdAt: string;
+  problems: NodeCondition[];
+  allocatableCpu: number;
+  allocatableMemory: number;
+  allocatablePods: number;
+  usage: NodeUsage | null;
+}

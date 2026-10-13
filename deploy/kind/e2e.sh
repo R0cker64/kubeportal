@@ -54,6 +54,14 @@ login() {
 }
 
 api() { curl -s -b "${WORK}/$1.jar" "${PORTAL}$2"; }
+# admin_call METHOD PATH [JSON]: state-changing admin request with the CSRF
+# header and Origin a browser would send; prints the HTTP status.
+admin_call() {
+  local args=(-s -o /dev/null -w '%{http_code}' -X "$1" -b "${WORK}/admin.jar"
+    -H 'X-Requested-With: kubeportal' -H "Origin: ${PORTAL}")
+  [[ $# -ge 3 ]] && args+=(-H 'Content-Type: application/json' --data "$3")
+  curl "${args[@]}" "${PORTAL}$2"
+}
 status_of() { curl -s -o /dev/null -w '%{http_code}' -b "${WORK}/$1.jar" "${PORTAL}$2"; }
 
 fail=0
@@ -73,14 +81,18 @@ service_names() {
     'import json,sys; print(",".join(sorted({s["name"] for s in json.load(sys.stdin)["services"]})))'
 }
 
-for user in alice bob carol admin; do login "${user}"; done
-log "logged in as alice, bob, carol and admin"
+for user in alice bob carol dave admin; do login "${user}"; done
+log "logged in as alice, bob, carol, dave and admin"
+
+# Team `search` is created below; start from a clean state when re-run.
+admin_call DELETE /api/admin/teams/search >/dev/null
 
 check "alice sees only payments" "$(service_names alice)" "checkout-web,payments-api"
 check "bob sees only catalog" "$(service_names bob)" "catalog-api,catalog-worker"
 check "carol sees nothing" "$(service_names carol)" ""
+check "dave sees nothing while team search does not exist" "$(service_names dave)" ""
 check "admin sees every workload, including unlabelled" "$(service_names admin)" \
-  "catalog-api,catalog-worker,checkout-web,legacy-batch,payments-api"
+  "catalog-api,catalog-worker,checkout-web,legacy-batch,payments-api,search-api"
 
 for suffix in "" /metrics /logs; do
   check "alice gets 404 for catalog-api${suffix}" \
@@ -98,6 +110,28 @@ check "alice's logs come only from payments-api pods" "$(api alice \
   'import json,sys; l=json.load(sys.stdin)["lines"]; print(bool(l) and all(x["pod"].startswith("payments-api-") for x in l))')" True
 check "admin reads legacy-batch logs" \
   "$(status_of admin /api/services/prod/deployment/legacy-batch/logs)" 200
+log "Phase 3: an admin creates a team and its members see their apps"
+for user in alice dave; do
+  check "${user} cannot list teams" "$(status_of "${user}" /api/admin/teams)" 403
+  check "${user} cannot list nodes" "$(status_of "${user}" /api/admin/nodes)" 403
+done
+check "admin lists nodes" "$(api admin /api/admin/nodes | python3 -c \
+  'import json,sys; d=json.load(sys.stdin); print(len(d["nodes"]) > 0 and all(n["ready"] for n in d["nodes"]))')" True
+check "search-api is listed with an unregistered team" "$(api admin /api/admin/workloads/unassigned | python3 -c \
+  'import json,sys; print(",".join(sorted({s["name"] for s in json.load(sys.stdin)["unknownTeam"]})))')" search-api
+check "team creation without CSRF header is rejected" "$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+  -b "${WORK}/admin.jar" -H 'Content-Type: application/json' \
+  --data '{"name":"search","displayName":"Search","groups":["team-search"]}' "${PORTAL}/api/admin/teams")" 403
+check "admin creates team search" "$(admin_call POST /api/admin/teams \
+  '{"name":"search","displayName":"Search","groups":["team-search"]}')" 201
+check "dave now sees search-api" "$(service_names dave)" "search-api"
+check "dave reads search-api logs" "$(status_of dave /api/services/prod/deployment/search-api/logs)" 200
+check "alice still does not see search-api" "$(status_of alice /api/services/prod/deployment/search-api)" 404
+check "admin removes the group from team search" "$(admin_call PUT /api/admin/teams/search \
+  '{"displayName":"Search","groups":[]}')" 200
+check "dave loses access immediately" "$(service_names dave)" ""
+check "admin deletes team search" "$(admin_call DELETE /api/admin/teams/search)" 204
+
 check "logout without CSRF header is rejected" \
   "$(curl -s -o /dev/null -w '%{http_code}' -X POST -b "${WORK}/alice.jar" "${PORTAL}/auth/logout")" 403
 check "anonymous API access is rejected" "$(curl -s -o /dev/null -w '%{http_code}' "${PORTAL}/api/services")" 401

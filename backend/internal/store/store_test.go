@@ -139,3 +139,61 @@ func TestMigrationVersion(t *testing.T) {
 		}
 	}
 }
+
+func TestTeamCRUD(t *testing.T) {
+	s := testStore(t)
+	ctx := t.Context()
+
+	if teams, err := s.ListTeams(ctx); err != nil || len(teams) != 0 {
+		t.Fatalf("ListTeams on empty db = %v, %v", teams, err)
+	}
+	team := Team{Name: "search", DisplayName: "Search", Groups: []string{"team-search", "oncall"}}
+	if err := s.CreateTeam(ctx, team); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CreateTeam(ctx, team); !errors.Is(err, ErrConflict) {
+		t.Fatalf("duplicate create: %v", err)
+	}
+	got, err := s.GetTeam(ctx, "search")
+	if err != nil || got.DisplayName != "Search" || !slices.Equal(got.Groups, []string{"oncall", "team-search"}) {
+		t.Fatalf("GetTeam = %+v, %v", got, err)
+	}
+	if teams, _ := s.TeamsForGroups(ctx, []string{"oncall"}); !slices.Equal(teams, []string{"search"}) {
+		t.Fatalf("TeamsForGroups after create = %v", teams)
+	}
+
+	if err := s.UpdateTeam(ctx, Team{Name: "search", DisplayName: "Búsqueda", Groups: []string{"team-search"}}); err != nil {
+		t.Fatal(err)
+	}
+	if teams, _ := s.TeamsForGroups(ctx, []string{"oncall"}); len(teams) != 0 {
+		t.Fatalf("removed group still maps: %v", teams)
+	}
+	if err := s.UpdateTeam(ctx, Team{Name: "missing", DisplayName: "x"}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("update missing: %v", err)
+	}
+
+	if err := s.CreateTeam(ctx, Team{Name: "empty", DisplayName: "Empty"}); err != nil {
+		t.Fatal(err)
+	}
+	teams, err := s.ListTeams(ctx)
+	if err != nil || len(teams) != 2 || teams[0].Name != "empty" || teams[0].Groups == nil {
+		t.Fatalf("ListTeams = %+v, %v", teams, err)
+	}
+
+	if err := s.DeleteTeam(ctx, "search"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.DeleteTeam(ctx, "search"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("delete missing: %v", err)
+	}
+	if teams, _ := s.TeamsForGroups(ctx, []string{"team-search"}); len(teams) != 0 {
+		t.Fatalf("deleted team still maps: %v", teams)
+	}
+	// A failed create leaves nothing behind.
+	if err := s.CreateTeam(ctx, Team{Name: "Bad Name", DisplayName: "x", Groups: []string{"g"}}); err == nil {
+		t.Fatal("invalid name accepted")
+	}
+	if _, err := s.GetTeam(ctx, "Bad Name"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("partial create: %v", err)
+	}
+}

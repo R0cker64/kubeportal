@@ -110,7 +110,8 @@ func run() error {
 		Resolver:  authz.NewResolver(db, cfg.AdminGroup),
 		Workloads: workloads,
 		Logs:      logs.NewClient(cfg.LokiURL, cfg.UpstreamTimeout),
-		Metrics:   metrics.NewClient(cfg.PrometheusURL, cfg.UpstreamTimeout),
+		Metrics:   metrics.NewClient(cfg.PrometheusURL, cfg.UpstreamTimeout, cfg.CadvisorNodeLabel),
+		Teams:     db,
 		Ready: func(ctx context.Context) error {
 			if !workloads.Synced() {
 				return errors.New("informers not synced")

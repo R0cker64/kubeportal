@@ -51,6 +51,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.AdminGroup != "kubeportal-admin" || len(cfg.SessionKey) != 32 {
 		t.Errorf("unexpected auth defaults: admin=%q key=%d bytes", cfg.AdminGroup, len(cfg.SessionKey))
 	}
+	if cfg.CadvisorNodeLabel != "instance" {
+		t.Errorf("CadvisorNodeLabel = %q", cfg.CadvisorNodeLabel)
+	}
 	if cfg.LogMaxRange != 7*24*time.Hour || cfg.LogMaxLines != 1000 || cfg.LiveTailsPerUser != 3 {
 		t.Errorf("unexpected log limits: %+v", cfg)
 	}
@@ -92,6 +95,7 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"KUBEPORTAL_OIDC_DISCOVERY_URL":       "keycloak",
 		"KUBEPORTAL_LOG_MAX_LINES":            "0",
 		"KUBEPORTAL_LOKI_URL":                 "file:///etc/passwd",
+		"KUBEPORTAL_CADVISOR_NODE_LABEL":      `node", "x`,
 	}
 	for key, val := range cases {
 		t.Run(key, func(t *testing.T) {

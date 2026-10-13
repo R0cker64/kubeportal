@@ -55,6 +55,10 @@ type Config struct {
 
 	LokiURL       *url.URL
 	PrometheusURL *url.URL
+	// CadvisorNodeLabel is the label with the node name on cAdvisor series:
+	// "instance" in the prometheus-community chart, "node" in
+	// kube-prometheus-stack.
+	CadvisorNodeLabel string
 	// UpstreamTimeout bounds every call to Kubernetes, Loki, Prometheus,
 	// Keycloak and PostgreSQL.
 	UpstreamTimeout time.Duration
@@ -68,6 +72,9 @@ type Config struct {
 
 // k8sNameRe matches an RFC 1123 label (max length checked separately).
 var k8sNameRe = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
+
+// promLabelRe matches a Prometheus label name.
+var promLabelRe = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 // Load reads the configuration using os.LookupEnv.
 func Load() (*Config, error) {
@@ -119,6 +126,10 @@ func LoadFrom(lookup func(string) (string, bool)) (*Config, error) {
 
 	cfg.LokiURL = l.url("LOKI_URL")
 	cfg.PrometheusURL = l.url("PROMETHEUS_URL")
+	cfg.CadvisorNodeLabel = l.str("CADVISOR_NODE_LABEL", "instance")
+	if !promLabelRe.MatchString(cfg.CadvisorNodeLabel) {
+		l.fail("CADVISOR_NODE_LABEL", "must be a Prometheus label name")
+	}
 	cfg.UpstreamTimeout = l.duration("UPSTREAM_TIMEOUT", 10*time.Second)
 
 	cfg.LogMaxRange = l.duration("LOG_MAX_RANGE", 7*24*time.Hour)

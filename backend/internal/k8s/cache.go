@@ -97,6 +97,7 @@ type Cache struct {
 	log       *slog.Logger
 	factories []informers.SharedInformerFactory
 	listers   map[string]nsListers
+	nodes     listerscorev1.NodeLister
 	synced    []cache.InformerSynced
 
 	mu   sync.Mutex
@@ -138,6 +139,16 @@ func NewCache(client kubernetes.Interface, namespaces []string, log *slog.Logger
 		}
 		c.factories = append(c.factories, f, ev)
 	}
+
+	// Nodes are cluster scoped and only shown to administrators.
+	cf := informers.NewSharedInformerFactoryWithOptions(client, 0, informers.WithTransform(stripManagedFields))
+	n := cf.Core().V1().Nodes()
+	if _, err := n.Informer().AddEventHandler(handler); err != nil {
+		return nil, fmt.Errorf("k8s: add handler: %w", err)
+	}
+	c.synced = append(c.synced, n.Informer().HasSynced)
+	c.nodes = n.Lister()
+	c.factories = append(c.factories, cf)
 	return c, nil
 }
 

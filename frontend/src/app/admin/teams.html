@@ -1,0 +1,83 @@
+<div class="toolbar">
+  <h1>Equipos</h1>
+  <button type="button" class="button primary" (click)="startCreate()" [disabled]="editing() !== null">
+    Nuevo equipo
+  </button>
+</div>
+<p class="muted">
+  Cada equipo ve los workloads cuyo label <code>team</code> coincide con su identificador. Los cambios se aplican al
+  momento, sin tocar el cluster.
+  @if (adminGroup()) {
+    Los miembros del grupo <code>{{ adminGroup() }}</code> son administradores.
+  }
+</p>
+
+@if (message(); as m) {
+  <p [class]="m.error ? 'error' : 'ok'" role="status">{{ m.text }}</p>
+}
+
+@if (editing() !== null) {
+  <form class="card form" (submit)="save($event)">
+    <h2>{{ editing() ? 'Editar equipo' : 'Nuevo equipo' }}</h2>
+    <label>
+      <span>Identificador (valor del label <code>team</code>)</span>
+      <input type="text" required maxlength="63" pattern="[a-z0-9]([-a-z0-9]*[a-z0-9])?" autocomplete="off"
+        [value]="name()" (input)="input('name', $event)" [disabled]="editing() !== ''" />
+    </label>
+    <label>
+      <span>Nombre visible</span>
+      <input type="text" required maxlength="200" autocomplete="off"
+        [value]="displayName()" (input)="input('displayName', $event)" />
+    </label>
+    <label>
+      <span>Grupos de Keycloak (uno por línea o separados por comas)</span>
+      <textarea rows="4" [value]="groups()" (input)="input('groups', $event)"></textarea>
+    </label>
+    <div class="actions">
+      <button type="submit" class="button primary" [disabled]="saving()">Guardar</button>
+      <button type="button" class="button" (click)="cancel()">Cancelar</button>
+    </div>
+  </form>
+}
+
+@if (loadError()) {
+  <p class="error">No se pudieron cargar los equipos.</p>
+} @else if (teams(); as list) {
+  <section class="card">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Identificador</th>
+          <th scope="col">Nombre</th>
+          <th scope="col">Grupos</th>
+          <th scope="col">Workloads</th>
+          <th scope="col"><span class="visually-hidden">Acciones</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (t of list; track t.name) {
+          <tr>
+            <td><code>{{ t.name }}</code></td>
+            <td>{{ t.displayName }}</td>
+            <td>
+              @for (g of t.groups; track g) {
+                <span class="tag">{{ g }}</span>
+              } @empty {
+                <span class="muted">Sin grupos</span>
+              }
+            </td>
+            <td>{{ t.workloads }}</td>
+            <td class="row-actions">
+              <button type="button" class="button" (click)="startEdit(t)">Editar</button>
+              <button type="button" class="button danger" (click)="remove(t)">Eliminar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5" class="muted">No hay equipos. Crea el primero.</td></tr>
+        }
+      </tbody>
+    </table>
+  </section>
+} @else {
+  <p class="muted">Cargando…</p>
+}

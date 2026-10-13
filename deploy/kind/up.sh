@@ -103,7 +103,8 @@ cat <<MSG
 Local environment ready.
   kubeconfig:   ${KUBECONFIG}   (your current kubectl context was not changed)
   credentials:  ${SECRETS_FILE}
-  demo users:   admin (kubeportal-admin), alice (team-payments), bob (team-catalog), carol (no team)
+  demo users:   admin (kubeportal-admin), alice (team-payments), bob (team-catalog),
+                dave (team-search, no team until an admin creates it), carol (no group)
   Keycloak:     make dev-keycloak  -> http://localhost:8180
   Verify:       make dev-verify
 MSG

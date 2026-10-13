@@ -92,10 +92,22 @@ Todas las rutas `/api` exigen sesión y devuelven solo datos visibles para el us
 | `GET /api/services/{env}/{kind}/{name}/logs?start=&end=&q=&level=&limit=` | Líneas de log, más recientes primero |
 | `GET /api/services/{env}/{kind}/{name}/logs/live?q=&level=` (WebSocket) | Líneas nuevas en vivo |
 
+Rutas de administración (fase 3). Solo para el grupo administrador; el resto recibe 403. Las que cambian estado exigen la cabecera CSRF y un body JSON sin campos desconocidos.
+
+| Ruta | Hace |
+|---|---|
+| `GET /api/admin/teams` | Equipos con sus grupos y cuántos workloads llevan su label |
+| `POST /api/admin/teams` | Crea un equipo (`name`, `displayName`, `groups`) |
+| `PUT /api/admin/teams/{name}` | Cambia el nombre visible y reemplaza los grupos |
+| `DELETE /api/admin/teams/{name}` | Elimina el equipo y su mapeo |
+| `GET /api/admin/nodes` | Nodos con estado, condiciones, pool, zona, kubelet, capacidad asignable y uso real |
+| `GET /api/admin/workloads/unassigned` | Workloads sin label `team` y con un `team` que no corresponde a ningún equipo |
+
 ## Administración (v1)
 
-- **Nodos:** estado y condiciones, node pool, zona, versión de kubelet, CPU/RAM real vs requests vs capacidad asignable, pods por nodo.
-- **Equipos:** alta de equipos con su valor de label, mapeo de grupos de Keycloak, lista de workloads sin label `team`.
+- **Nodos:** estado y condiciones, node pool, zona, versión de kubelet, CPU/RAM real vs requests vs capacidad asignable, pods por nodo. La lista viene de un informer de nodos; el uso real, del cgroup raíz de cAdvisor (`id="/"`), y los requests y pods, de kube-state-metrics (solo pods Pending o Running). Si Prometheus no responde, se muestran los nodos sin uso.
+- **Equipos:** alta de equipos con su valor de label, mapeo de grupos de Keycloak, lista de workloads sin label `team` o con un `team` no registrado. Los cambios se aplican en la siguiente petición de cada usuario (los equipos se resuelven en cada petición), sin tocar el cluster.
+- Las consultas de administración exigen un `authz.AdminScope`, que solo se obtiene de un usuario del grupo administrador. Cada cambio de equipos se registra en el log del backend con el administrador, el equipo y el número de grupos.
 
 ## Prerrequisitos en el cluster
 
@@ -103,6 +115,7 @@ Todas las rutas `/api` exigen sesión y devuelven solo datos visibles para el us
 - El colector de logs (Promtail/Alloy) copia el label `team` del pod como label de Loki.
 - Label `app.kubernetes.io/name` en el template de los pods; el colector lo copia a Loki como `app`.
 - kube-state-metrics con `--metric-labels-allowlist=pods=[team,app.kubernetes.io/name],deployments=[team]`.
+- cAdvisor scrapeado por Prometheus con el nombre del nodo en una etiqueta: `instance` en el chart de prometheus-community (por defecto) o `node` en kube-prometheus-stack (`config.cadvisorNodeLabel` del chart).
 - Keycloak instalado (no existe aún) con realm, client confidencial, grupos y los scopes `profile` (con `preferred_username`) y `groups` (claim `groups` sin ruta completa) en el ID token.
 - Confirmar la retención de Loki (`limits_config.retention_period` y `compactor.retention_enabled`).
 

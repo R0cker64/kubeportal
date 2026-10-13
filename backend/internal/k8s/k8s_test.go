@@ -9,6 +9,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -189,5 +190,47 @@ func TestAssess(t *testing.T) {
 	h, _ = Assess(Workload{Desired: 0}, nil, now)
 	if h.Status != StatusHealthy {
 		t.Fatalf("scaled to zero: %+v", h)
+	}
+}
+
+func TestNodes(t *testing.T) {
+	ready := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "b-node", Labels: map[string]string{
+			"cloud.google.com/gke-nodepool": "pool-1", "topology.kubernetes.io/zone": "us-central1-f",
+			"node-role.kubernetes.io/worker": "",
+		}},
+		Status: corev1.NodeStatus{
+			Conditions: []corev1.NodeCondition{
+				{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+				{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse},
+			},
+			Allocatable: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("3920m"),
+				corev1.ResourceMemory: resource.MustParse("12Gi"),
+				corev1.ResourcePods:   resource.MustParse("110"),
+			},
+			NodeInfo: corev1.NodeSystemInfo{KubeletVersion: "v1.37.0"},
+		},
+	}
+	sick := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "a-node"},
+		Spec:       corev1.NodeSpec{Unschedulable: true},
+		Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+			{Type: corev1.NodeReady, Status: corev1.ConditionUnknown, Reason: "NodeStatusUnknown"},
+			{Type: corev1.NodeDiskPressure, Status: corev1.ConditionTrue},
+		}},
+	}
+	nodes := newTestCache(t, ready, sick).Nodes()
+	if len(nodes) != 2 || nodes[0].Name != "a-node" {
+		t.Fatalf("Nodes = %+v", nodes)
+	}
+	a, b := nodes[0], nodes[1]
+	if a.Ready || !a.Unschedulable || len(a.Problems) != 2 || a.Problems[0].Reason != "NodeStatusUnknown" {
+		t.Errorf("sick node = %+v", a)
+	}
+	if !b.Ready || len(b.Problems) != 0 || b.Pool != "pool-1" || b.Zone != "us-central1-f" ||
+		!slices.Equal(b.Roles, []string{"worker"}) || b.AllocatableCPU != 3.92 ||
+		b.AllocatableMemory != 12<<30 || b.AllocatablePods != 110 || b.KubeletVersion != "v1.37.0" {
+		t.Errorf("ready node = %+v", b)
 	}
 }

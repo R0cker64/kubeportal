@@ -61,6 +61,8 @@ spec:
               value: {{ required "config.lokiURL is required" .Values.config.lokiURL | quote }}
             - name: KUBEPORTAL_PROMETHEUS_URL
               value: {{ required "config.prometheusURL is required" .Values.config.prometheusURL | quote }}
+            - name: KUBEPORTAL_CADVISOR_NODE_LABEL
+              value: {{ .Values.config.cadvisorNodeLabel | quote }}
             - name: KUBEPORTAL_SESSION_TTL
               value: {{ .Values.config.sessionTTL | quote }}
             - name: KUBEPORTAL_SESSION_IDLE_TIMEOUT

@@ -94,7 +94,7 @@ func TestWorkload(t *testing.T) {
 
 	base, _ := url.Parse(srv.URL)
 	now := time.Now()
-	series, err := NewClient(base, 5*time.Second).Workload(t.Context(), podSelector(t),
+	series, err := NewClient(base, 5*time.Second, DefaultCadvisorNodeLabel).Workload(t.Context(), podSelector(t),
 		authz.TimeRange{Start: now.Add(-time.Hour), End: now})
 	if err != nil {
 		t.Fatal(err)
@@ -115,7 +115,7 @@ func TestWorkloadUpstreamError(t *testing.T) {
 	defer srv.Close()
 	base, _ := url.Parse(srv.URL)
 	now := time.Now()
-	_, err := NewClient(base, time.Second).Workload(t.Context(), podSelector(t),
+	_, err := NewClient(base, time.Second, DefaultCadvisorNodeLabel).Workload(t.Context(), podSelector(t),
 		authz.TimeRange{Start: now.Add(-time.Hour), End: now})
 	if !errors.Is(err, ErrUpstream) {
 		t.Fatalf("err = %v", err)

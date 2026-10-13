@@ -51,14 +51,20 @@ type Series struct {
 
 // Client talks to the Prometheus HTTP API.
 type Client struct {
-	base    *url.URL
-	http    *http.Client
-	timeout time.Duration
+	base              *url.URL
+	http              *http.Client
+	timeout           time.Duration
+	cadvisorNodeLabel string
 }
 
-// NewClient returns a client for the Prometheus at base.
-func NewClient(base *url.URL, timeout time.Duration) *Client {
-	return &Client{base: base, http: &http.Client{Timeout: timeout}, timeout: timeout}
+// NewClient returns a client for the Prometheus at base. cadvisorNodeLabel
+// is the label holding the node name on cAdvisor series (see
+// DefaultCadvisorNodeLabel).
+func NewClient(base *url.URL, timeout time.Duration, cadvisorNodeLabel string) *Client {
+	return &Client{
+		base: base, http: &http.Client{Timeout: timeout}, timeout: timeout,
+		cadvisorNodeLabel: cadvisorNodeLabel,
+	}
 }
 
 // Queries returns the PromQL for each series of the workload selected by sel.

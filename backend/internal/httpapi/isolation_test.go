@@ -72,14 +72,75 @@ func (f *fakeAuth) Logout(context.Context, http.ResponseWriter, *http.Request) (
 	return "https://idp.example.com/logout", nil
 }
 
-type teamMap map[string][]string
+// memTeams is an in-memory team store. It backs both the authz resolver
+// and the admin API, like store.Store does in production.
+type memTeams struct {
+	mu    sync.Mutex
+	teams map[string]store.Team
+}
 
-func (m teamMap) TeamsForGroups(_ context.Context, groups []string) ([]string, error) {
+func newMemTeams(teams ...store.Team) *memTeams {
+	m := &memTeams{teams: map[string]store.Team{}}
+	for _, t := range teams {
+		m.teams[t.Name] = t
+	}
+	return m
+}
+
+func (m *memTeams) TeamsForGroups(_ context.Context, groups []string) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	var out []string
-	for _, g := range groups {
-		out = append(out, m[g]...)
+	for _, t := range m.teams {
+		for _, g := range t.Groups {
+			if slices.Contains(groups, g) {
+				out = append(out, t.Name)
+				break
+			}
+		}
 	}
 	return out, nil
+}
+
+func (m *memTeams) ListTeams(context.Context) ([]store.Team, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]store.Team, 0, len(m.teams))
+	for _, t := range m.teams {
+		out = append(out, t)
+	}
+	slices.SortFunc(out, func(a, b store.Team) int { return strings.Compare(a.Name, b.Name) })
+	return out, nil
+}
+
+func (m *memTeams) CreateTeam(_ context.Context, t store.Team) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.teams[t.Name]; ok {
+		return store.ErrConflict
+	}
+	m.teams[t.Name] = t
+	return nil
+}
+
+func (m *memTeams) UpdateTeam(_ context.Context, t store.Team) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.teams[t.Name]; !ok {
+		return store.ErrNotFound
+	}
+	m.teams[t.Name] = t
+	return nil
+}
+
+func (m *memTeams) DeleteTeam(_ context.Context, name string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.teams[name]; !ok {
+		return store.ErrNotFound
+	}
+	delete(m.teams, name)
+	return nil
 }
 
 // fakeLogs records every selector it receives.
@@ -113,6 +174,13 @@ type fakeMetrics struct {
 	selectors []string
 }
 
+func (f *fakeMetrics) Nodes(_ context.Context, scope authz.AdminScope) (map[string]metrics.NodeUsage, error) {
+	if !scope.Granted() {
+		return nil, authz.ErrForbidden
+	}
+	return map[string]metrics.NodeUsage{"node-a": {CPU: 0.5, Pods: 3}}, nil
+}
+
 func (f *fakeMetrics) Workload(_ context.Context, sel authz.PodSelector, _ authz.TimeRange) ([]metrics.Series, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -125,6 +193,7 @@ func (f *fakeMetrics) Workload(_ context.Context, sel authz.PodSelector, _ authz
 type fixture struct {
 	handler http.Handler
 	cfg     *config.Config
+	teams   *memTeams
 	logs    *fakeLogs
 	metrics *fakeMetrics
 }
@@ -140,12 +209,19 @@ var fixtureWorkloads = []wl{
 	{"prod", k8s.KindDeployment, "catalog-api", "catalog"},
 	{"prod", k8s.KindStatefulSet, "catalog-db", "catalog"},
 	{"prod", k8s.KindDeployment, "legacy-batch", ""},
+	// Labelled for a team that is not registered yet (see admin tests).
+	{"staging", k8s.KindDeployment, "search-api", "search"},
 }
 
 func ptr[T any](v T) *T { return &v }
 
 func objects() []runtime.Object {
-	var objs []runtime.Object
+	objs := []runtime.Object{&corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "node-a"},
+		Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+			{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+		}},
+	}}
 	for i, w := range fixtureWorkloads {
 		labels := map[string]string{authz.AppLabel: w.name}
 		if w.team != "" {
@@ -208,10 +284,15 @@ func newFixture(t *testing.T, publicURL string) *fixture {
 		"bob":   {Subject: "bob", Username: "bob", Groups: []string{"team-catalog"}},
 		"carol": {Subject: "carol", Username: "carol", Groups: []string{"unmapped"}},
 		"admin": {Subject: "admin", Username: "admin", Groups: []string{"kubeportal-admin"}},
+		"dave":  {Subject: "dave", Username: "dave", Groups: []string{"team-search"}},
 	}}
-	resolver := authz.NewResolver(teamMap{"team-payments": {"payments"}, "team-catalog": {"catalog"}}, "kubeportal-admin")
+	f.teams = newMemTeams(
+		store.Team{Name: "payments", DisplayName: "Payments", Groups: []string{"team-payments"}},
+		store.Team{Name: "catalog", DisplayName: "Catalog", Groups: []string{"team-catalog"}},
+	)
+	resolver := authz.NewResolver(f.teams, "kubeportal-admin")
 	f.handler = NewHandler(cfg, testLogger(), nil, Deps{
-		Auth: fa, Resolver: resolver, Workloads: cache, Logs: f.logs, Metrics: f.metrics,
+		Auth: fa, Resolver: resolver, Workloads: cache, Logs: f.logs, Metrics: f.metrics, Teams: f.teams,
 	})
 	return f
 }
@@ -230,7 +311,7 @@ func visibleTo(user string, w wl) bool {
 	}
 }
 
-var users = []string{"alice", "bob", "carol", "admin"}
+var users = []string{"alice", "bob", "carol", "dave", "admin"}
 
 func (f *fixture) get(t *testing.T, user, target string) *httptest.ResponseRecorder {
 	t.Helper()
@@ -364,11 +445,11 @@ func TestServiceEndpointsIsolation(t *testing.T) {
 		}
 	}
 
-	// Every upstream query carried the caller's own team (or team="" for the
-	// admin on the unlabelled workload), never another team's.
+	// Every upstream query carried an exact team matcher (team="" for the
+	// admin on the unlabelled workload); which team is checked by the 404s
+	// above and by the authz tests.
 	for _, sel := range append(slices.Clone(f.logs.selectors), f.metrics.selectors...) {
-		if !strings.Contains(sel, `team="payments"`) && !strings.Contains(sel, `team="catalog"`) &&
-			!strings.Contains(sel, `team=""`) {
+		if !strings.Contains(sel, `team="`) {
 			t.Errorf("selector without team scope: %s", sel)
 		}
 	}

@@ -1,6 +1,14 @@
 <header class="topbar">
   <a class="brand" routerLink="/">{{ productName }}</a>
   @if (auth.me(); as me) {
+    <nav class="nav" aria-label="Principal">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Servicios</a>
+      @if (me.admin) {
+        <a routerLink="/admin/nodes" routerLinkActive="active">Nodos</a>
+        <a routerLink="/admin/teams" routerLinkActive="active">Equipos</a>
+        <a routerLink="/admin/unassigned" routerLinkActive="active">Sin equipo</a>
+      }
+    </nav>
     <span class="spacer"></span>
     <span class="user">
       {{ me.username }}

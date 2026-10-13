@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Auth } from './core/auth';
 import { Login } from './login/login';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, Login],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Login],
   templateUrl: './app.html',
   styleUrl: './app.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

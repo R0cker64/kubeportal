@@ -1,0 +1,35 @@
+<h1>Workloads sin equipo</h1>
+@if (loadError()) {
+  <p class="error">No se pudo cargar la lista.</p>
+} @else if (sections(); as sections) {
+  @for (section of sections; track section.title) {
+    <h2>{{ section.title }}</h2>
+    <p class="muted">{{ section.hint }}</p>
+    <section class="card">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Ambiente</th>
+            <th scope="col">Servicio</th>
+            <th scope="col">Label team</th>
+            <th scope="col">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of section.items; track s.environment + '/' + s.kind + '/' + s.name) {
+            <tr>
+              <td>{{ s.environment }}</td>
+              <td><a [routerLink]="['/services', s.environment, s.kind, s.name]">{{ s.name }}</a></td>
+              <td>{{ s.team || '—' }}</td>
+              <td><span class="status" [class]="s.health.status">{{ statusLabels[s.health.status] }}</span></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4" class="muted">Ninguno.</td></tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+} @else {
+  <p class="muted">Cargando…</p>
+}
