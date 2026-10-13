@@ -1,0 +1,54 @@
+<form class="filters card" (submit)="submit($event)">
+  <label>
+    <span class="muted">Rango</span>
+    <select [value]="range()" (change)="onRange($event)" [disabled]="live()">
+      @for (r of ranges; track r) {
+        <option [value]="r">Últimos {{ r }}</option>
+      }
+    </select>
+  </label>
+  <label class="grow">
+    <span class="muted">Texto</span>
+    <input type="search" [value]="text()" (input)="onText($event)" [attr.maxlength]="maxSearch"
+      placeholder="Texto exacto, p. ej. timeout" />
+  </label>
+  <label>
+    <span class="muted">Nivel</span>
+    <select [value]="level()" (change)="onLevel($event)">
+      <option value="">Todos</option>
+      @for (l of levels; track l) {
+        <option [value]="l">{{ l }}</option>
+      }
+    </select>
+  </label>
+  <button type="submit" class="button primary">{{ live() ? 'Aplicar' : 'Buscar' }}</button>
+  <button type="button" class="button" [attr.aria-pressed]="live()" (click)="toggleLive()">
+    {{ live() ? 'Detener en vivo' : 'En vivo' }}
+  </button>
+</form>
+
+@if (error(); as e) {
+  <p class="error" role="alert">{{ e }}</p>
+}
+
+<section class="card logs" aria-live="off">
+  @if (loading()) {
+    <p class="muted">Buscando…</p>
+  } @else {
+    @if (live()) {
+      <p class="muted">En vivo: las líneas nuevas aparecen arriba.</p>
+    }
+    @for (l of lines(); track $index) {
+      <div class="line" [class]="l.level ?? ''">
+        <span class="time">{{ l.time | date: 'yyyy-MM-dd HH:mm:ss.SSS' }}</span>
+        <span class="pod">{{ l.pod }}</span>
+        <span class="text">{{ l.line }}</span>
+      </div>
+    } @empty {
+      <p class="muted">Sin líneas para estos filtros.</p>
+    }
+    @if (truncated()) {
+      <p class="muted">Se muestran las líneas más recientes. Acota el rango o el texto para ver más.</p>
+    }
+  }
+</section>

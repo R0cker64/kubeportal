@@ -1,0 +1,33 @@
+.toolbar {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.filters input {
+  min-width: 16rem;
+}
+
+.summary {
+  margin: 0 0 0.75rem;
+}
+
+.group {
+  margin-bottom: 1rem;
+}
+
+.group h2 {
+  margin-top: 0;
+}
+
+.kind {
+  margin-left: 0.4rem;
+  font-size: 0.8rem;
+}

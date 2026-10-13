@@ -1,0 +1,55 @@
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.head h1 {
+  margin: 0;
+}
+
+.tag.warn {
+  border-color: var(--kp-warn);
+  color: var(--kp-warn);
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: baseline;
+}
+
+.reasons {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--kp-warn);
+}
+
+.ranges {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  gap: 1rem;
+}
+
+.event {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--kp-border);
+}
+
+.event:last-child {
+  border-bottom: none;
+}
+
+.event > span,
+.event > strong {
+  margin-right: 0.5rem;
+}

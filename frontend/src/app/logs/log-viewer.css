@@ -1,0 +1,55 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+}
+
+.filters .grow {
+  flex: 1;
+  min-width: 14rem;
+}
+
+.logs {
+  max-height: 32rem;
+  overflow: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.82rem;
+}
+
+.line {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.1rem 0;
+  border-left: 3px solid transparent;
+  padding-left: 0.4rem;
+}
+
+.line.warn {
+  border-left-color: var(--kp-warn);
+}
+
+.line.error,
+.line.fatal,
+.line.critical {
+  border-left-color: var(--kp-bad);
+}
+
+.time,
+.pod {
+  color: var(--kp-muted);
+  white-space: nowrap;
+}
+
+.text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

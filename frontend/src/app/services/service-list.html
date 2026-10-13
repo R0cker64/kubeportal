@@ -1,0 +1,69 @@
+<div class="toolbar">
+  <h1>Servicios</h1>
+  <span class="muted" aria-live="polite">
+    @if (live()) {
+      Actualización en vivo
+    } @else {
+      Reconectando…
+    }
+  </span>
+</div>
+
+<div class="filters">
+  <button type="button" class="button" [attr.aria-pressed]="environment() === ''" (click)="environment.set('')">
+    Todos
+  </button>
+  @for (env of environments(); track env) {
+    <button type="button" class="button" [attr.aria-pressed]="environment() === env" (click)="environment.set(env)">
+      {{ env }}
+    </button>
+  }
+  <input type="search" placeholder="Buscar servicio o equipo" aria-label="Buscar servicio o equipo"
+    [value]="search()" (input)="setSearch($event)" maxlength="63" />
+</div>
+
+@if (services() === null) {
+  <p class="muted">Cargando servicios…</p>
+} @else {
+  <p class="muted summary">
+    {{ counts().total }} servicios · {{ counts().degraded }} degradados · {{ counts().down }} caídos
+  </p>
+  @for (group of groups(); track group.environment) {
+    <section class="card group">
+      <h2>{{ group.environment }}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Servicio</th>
+            <th scope="col">Equipo</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Réplicas</th>
+            <th scope="col">Reinicios</th>
+            <th scope="col">Motivos</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of group.services; track s.kind + '/' + s.name) {
+            <tr>
+              <td>
+                <a [routerLink]="['/services', s.environment, s.kind, s.name]">{{ s.name }}</a>
+                <span class="muted kind">{{ kindLabels[s.kind] }}</span>
+              </td>
+              <td>{{ s.team || '—' }}</td>
+              <td><span class="status" [class]="s.health.status">{{ statusLabels[s.health.status] }}</span></td>
+              <td>{{ s.health.ready }}/{{ s.health.desired }}</td>
+              <td>{{ s.health.restarts }}</td>
+              <td>
+                @for (r of s.health.reasons; track r) {
+                  <div>{{ reasonLabel(r) }}</div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  } @empty {
+    <p class="muted">No hay servicios que mostrar.</p>
+  }
+}

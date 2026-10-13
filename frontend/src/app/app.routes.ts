@@ -1,7 +1,9 @@
 import { Routes } from '@angular/router';
-import { Home } from './home/home';
+import { ServiceDetailPage } from './services/service-detail';
+import { ServiceList } from './services/service-list';
 
 export const routes: Routes = [
-  { path: '', component: Home },
+  { path: '', component: ServiceList, title: 'Servicios · KubePortal' },
+  { path: 'services/:environment/:kind/:name', component: ServiceDetailPage, title: 'Servicio · KubePortal' },
   { path: '**', redirectTo: '' },
 ];
