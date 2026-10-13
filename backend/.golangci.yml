@@ -1,0 +1,46 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - bodyclose
+    - depguard
+    - errorlint
+    - gosec
+    - misspell
+    - noctx
+    - revive
+    - sqlclosecheck
+    - unconvert
+    - unparam
+  settings:
+    depguard:
+      rules:
+        # CLAUDE.md rule 13: no os/exec or unsafe in this codebase.
+        forbidden:
+          files: ["$all"]
+          deny:
+            - pkg: os/exec
+              desc: running external processes is forbidden
+            - pkg: unsafe
+              desc: unsafe is forbidden
+            - pkg: math/rand
+              desc: use crypto/rand
+            - pkg: math/rand/v2
+              desc: use crypto/rand
+    gosec:
+      excludes: []
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+  exclusions:
+    presets:
+      - std-error-handling
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
