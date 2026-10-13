@@ -23,6 +23,7 @@ Si tu usuario acaba de entrar al grupo `docker`, cierra sesión y vuelve a entra
 make dev-up       # crea el cluster y despliega todo (idempotente)
 make dev-verify   # comprueba {team="payments"} en Loki y label_team en kube-state-metrics
 make dev-deploy   # construye la imagen, la carga en kind, instala el chart y carga los equipos de ejemplo
+make dev-forward  # port-forward del portal (:8080) y de Keycloak (:8180) a la vez
 make dev-portal   # port-forward del portal en http://localhost:8080
 make dev-keycloak # port-forward de Keycloak en http://localhost:8180
 make dev-down     # elimina el cluster
@@ -57,7 +58,7 @@ Los tres namespaces de ambiente y `kubeportal` aplican el Pod Security Standard 
 
 El mapeo de grupos a equipos de ejemplo (`team-payments` → `payments`, `team-catalog` → `catalog`) se carga con `deploy/kind/manifests/seed-teams.sql` al final de `make dev-deploy`. En la fase 3 se gestionará desde la vista de administración.
 
-Para probar el portal en el navegador: `make dev-portal` y `make dev-keycloak` en dos terminales, abrir http://localhost:8080 y entrar con uno de los usuarios (la contraseña es `DEMO_USER_PASSWORD` de `.kind/secrets.env`).
+Para probar el portal en el navegador: `make dev-forward` (los dos port-forwards son necesarios: el login redirige a Keycloak en `localhost:8180`), abrir http://localhost:8080 y entrar con uno de los usuarios (la contraseña es `DEMO_USER_PASSWORD` de `.kind/secrets.env`).
 
 Las contraseñas, el secreto del client OIDC y la contraseña de PostgreSQL se generan al azar la primera vez en `.kind/secrets.env` (ignorado por git) y se cargan como Secrets de Kubernetes. No hay credenciales en el repositorio.
 
