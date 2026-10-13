@@ -1,0 +1,26 @@
+alertmanager:
+  enabled: false
+prometheus-pushgateway:
+  enabled: false
+
+kube-state-metrics:
+  # Expose the `team` label as label_team (docs/architecture.md prerequisites).
+  metricLabelsAllowlist:
+    - pods=[team]
+    - deployments=[team]
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+    limits: { memory: 256Mi }
+
+prometheus-node-exporter:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }
+
+server:
+  retention: 7d
+  persistentVolume:
+    size: 4Gi
+  resources:
+    requests: { cpu: 100m, memory: 512Mi }
+    limits: { memory: 2Gi }
