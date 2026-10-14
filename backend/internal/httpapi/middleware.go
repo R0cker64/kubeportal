@@ -26,7 +26,9 @@ const cspRest = "img-src 'self' data:; " +
 	"font-src 'self'; " +
 	"connect-src 'self'; " +
 	"object-src 'none'; " +
-	"base-uri 'none'; " +
+	// 'self' (not 'none'): Angular needs <base href="/"> so that deep links
+	// such as /admin/nodes load /main-*.js instead of /admin/main-*.js.
+	"base-uri 'self'; " +
 	"form-action 'self'; " +
 	"frame-ancestors 'none'"
 

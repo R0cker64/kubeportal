@@ -134,6 +134,16 @@ check "admin deletes team search" "$(admin_call DELETE /api/admin/teams/search)"
 
 check "logout without CSRF header is rejected" \
   "$(curl -s -o /dev/null -w '%{http_code}' -X POST -b "${WORK}/alice.jar" "${PORTAL}/auth/logout")" 403
+# Deep links must render when loaded directly (CSP base-uri vs <base href>).
+CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+if [[ -n "${CHROME}" ]]; then
+  for path in /services/prod/deployment/payments-api /admin/nodes; do
+    check "deep link ${path} renders" "$(timeout 60 "${CHROME}" --headless=new --disable-gpu \
+      --virtual-time-budget=8000 --dump-dom "${PORTAL}${path}" 2>/dev/null | grep -c 'Iniciar sesión')" 1
+  done
+else
+  log "no Chrome found: skipping the deep link check"
+fi
 check "anonymous API access is rejected" "$(curl -s -o /dev/null -w '%{http_code}' "${PORTAL}/api/services")" 401
 
 exit "${fail}"
