@@ -45,6 +45,16 @@ k() {
   kubectl --kubeconfig "${KUBECONFIG}" --context "${KCONTEXT}" "$@"
 }
 
+# k_background starts kubectl in the background and appends its PID to the
+# caller's PIDS array. Backgrounding the k function instead would record the
+# PID of a subshell, and killing it would leave kubectl (e.g. a port-forward)
+# running.
+k_background() {
+  guard_kind_context
+  kubectl --kubeconfig "${KUBECONFIG}" --context "${KCONTEXT}" "$@" &
+  PIDS+=("$!")
+}
+
 h() {
   guard_kind_context
   helm --kubeconfig "${KUBECONFIG}" --kube-context "${KCONTEXT}" "$@"

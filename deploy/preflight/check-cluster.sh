@@ -81,7 +81,9 @@ done
 forward() {
   local spec="$1" local_port="$2" path="$3"
   [[ "${spec}" =~ ${svc_re} ]]
-  k -n "${BASH_REMATCH[1]}" port-forward "svc/${BASH_REMATCH[2]}" "${local_port}:${BASH_REMATCH[3]}" >/dev/null 2>&1 &
+  # kubectl directly (not the k function), so $! is kubectl's own PID.
+  kubectl "${KARGS[@]}" -n "${BASH_REMATCH[1]}" port-forward "svc/${BASH_REMATCH[2]}" \
+    "${local_port}:${BASH_REMATCH[3]}" >/dev/null 2>&1 &
   PIDS+=("$!")
   for _ in $(seq 1 30); do
     curl -s -o /dev/null "http://127.0.0.1:${local_port}${path}" && return 0

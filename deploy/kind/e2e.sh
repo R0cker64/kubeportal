@@ -26,8 +26,7 @@ PORTAL=http://localhost:8080
 forward() {
   local ns="$1" svc="$2" port="$3" path="$4"
   if ! curl -s -o /dev/null "http://localhost:${port}${path}"; then
-    k -n "${ns}" port-forward "svc/${svc}" "${port}:8080" >/dev/null 2>&1 &
-    PIDS+=("$!")
+    k_background -n "${ns}" port-forward "svc/${svc}" "${port}:8080" >/dev/null 2>&1
   fi
   for _ in $(seq 1 30); do
     curl -sf -o /dev/null "http://localhost:${port}${path}" && return 0
