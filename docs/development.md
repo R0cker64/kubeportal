@@ -4,7 +4,7 @@ Todo el desarrollo usa un cluster kind (ADR 0007). Los scripts de `deploy/kind/`
 
 ## Requisitos
 
-Go (versión de `backend/go.mod`), Node.js 24, Docker (con permiso para el usuario), kind, kubectl, Helm 4, openssl, golangci-lint v2, govulncheck, gitleaks y trivy.
+Go (versión de `backend/go.mod`), Node.js 24 o 26 (la imagen se construye con 26), Docker (con permiso para el usuario), kind, kubectl, Helm 4, openssl, golangci-lint v2, govulncheck, gitleaks y trivy.
 
 ## Límites de inotify (una sola vez por máquina)
 
@@ -23,7 +23,7 @@ Si tu usuario acaba de entrar al grupo `docker`, cierra sesión y vuelve a entra
 make dev-up       # crea el cluster y despliega todo (idempotente)
 make dev-verify   # comprueba {team="payments"} en Loki y label_team en kube-state-metrics
 make dev-deploy   # construye la imagen, la carga en kind, instala el chart y carga los equipos de ejemplo
-make dev-forward  # port-forward del portal (:8080) y de Keycloak (:8180) a la vez
+make dev-forward  # port-forward del portal (:8080) y de Keycloak (:8180) a la vez (se corta tras dev-deploy: vuelve a lanzarlo)
 make dev-portal   # port-forward del portal en http://localhost:8080
 make dev-keycloak # port-forward de Keycloak en http://localhost:8180
 make dev-down     # elimina el cluster

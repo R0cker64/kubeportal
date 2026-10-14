@@ -116,7 +116,7 @@ Rutas de administración (fase 3). Solo para el grupo administrador; el resto re
 - Label `app.kubernetes.io/name` en el template de los pods; el colector lo copia a Loki como `app`.
 - kube-state-metrics con `--metric-labels-allowlist=pods=[team,app.kubernetes.io/name],deployments=[team]`.
 - cAdvisor scrapeado por Prometheus con el nombre del nodo en una etiqueta: `instance` en el chart de prometheus-community (por defecto) o `node` en kube-prometheus-stack (`config.cadvisorNodeLabel` del chart).
-- Keycloak instalado (no existe aún) con realm, client confidencial, grupos y los scopes `profile` (con `preferred_username`) y `groups` (claim `groups` sin ruta completa) en el ID token.
+- Keycloak instalado (en el cluster real, con el operador: `deploy/flux/`) con realm, client confidencial, grupos y los scopes `profile` (con `preferred_username`) y `groups` (claim `groups` sin ruta completa) en el ID token.
 - Confirmar la retención de Loki (`limits_config.retention_period` y `compactor.retention_enabled`).
 
 ## Despliegue
@@ -124,7 +124,7 @@ Rutas de administración (fase 3). Solo para el grupo administrador; el resto re
 | Etapa | Acceso |
 |---|---|
 | Desarrollo | Cluster kind local con todas las dependencias y apps de ejemplo |
-| v1 en el cluster real | Chart de Helm vía Flux; acceso con `kubectl port-forward` |
+| v1 en el cluster real | Chart de Helm (OCI en GHCR, firmado) vía Flux; Keycloak con su operador; PostgreSQL en Cloud SQL por IP privada; acceso con `kubectl port-forward` (ver [instalación](installation.md), ADR 0010 y 0011) |
 | Futuro | Exposición con dominio y TLS (Gateway/Ingress o Cloudflare Tunnel) |
 
 Keycloak tendrá un hostname fijo configurado (`KC_HOSTNAME`). El backend valida el `iss` contra esa URL pública aunque descargue las llaves (JWKS) por la URL interna del Service. Así funciona igual con port-forward y con dominio.
