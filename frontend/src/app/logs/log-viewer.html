@@ -1,9 +1,9 @@
 <form class="filters card" (submit)="submit($event)">
   <label>
     <span class="muted">Rango</span>
-    <select [value]="range()" (change)="onRange($event)" [disabled]="live()">
+    <select (change)="onRange($event)" [disabled]="live()">
       @for (r of ranges; track r) {
-        <option [value]="r">Últimos {{ r }}</option>
+        <option [value]="r" [selected]="r === range()">Últimos {{ r }}</option>
       }
     </select>
   </label>
@@ -14,10 +14,10 @@
   </label>
   <label>
     <span class="muted">Nivel</span>
-    <select [value]="level()" (change)="onLevel($event)">
-      <option value="">Todos</option>
+    <select (change)="onLevel($event)">
+      <option value="" [selected]="level() === ''">Todos</option>
       @for (l of levels; track l) {
-        <option [value]="l">{{ l }}</option>
+        <option [value]="l" [selected]="l === level()">{{ l }}</option>
       }
     </select>
   </label>
