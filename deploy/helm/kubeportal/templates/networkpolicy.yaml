@@ -37,12 +37,19 @@ spec:
     {{- range $name, $dep := .Values.networkPolicy.egress }}
     # {{ $name }}
     - to:
+        {{- if $dep.cidrs }}
+        {{- range $dep.cidrs }}
+        - ipBlock:
+            cidr: {{ . }}
+        {{- end }}
+        {{- else }}
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ default $.Release.Namespace $dep.namespace }}
           podSelector:
             matchLabels:
               {{- toYaml $dep.podLabels | nindent 14 }}
+        {{- end }}
       ports:
         {{- range $dep.ports }}
         - { protocol: TCP, port: {{ . }} }
