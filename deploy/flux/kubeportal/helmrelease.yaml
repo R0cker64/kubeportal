@@ -1,0 +1,68 @@
+# KubePortal release. The chart already pins its image by digest. Values not
+# set here keep the chart defaults (deploy/helm/kubeportal/values.yaml).
+#
+# Secrets (create them before reconciling; never commit them):
+#   kubeportal-oidc     client-secret  (same value as in the keycloak namespace)
+#   kubeportal-db       url            postgres://kubeportal:<password>@<ip>:5432/kubeportal?sslmode=verify-ca&sslrootcert=/etc/kubeportal/db-ca/ca.crt
+#   kubeportal-session  key            openssl rand -hex 32
+#   kubeportal-db-ca    ca.crt         Cloud SQL server CA
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kubeportal
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: kubeportal
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback
+  test:
+    enable: true
+  values:
+    config:
+      publicURL: http://localhost:8080
+      # Namespaces that are environments in this cluster.
+      environments: REPLACE_ME # e.g. dev,staging,prod
+      adminGroup: kubeportal-admin
+      oidc:
+        issuerURL: http://localhost:8180/realms/kubeportal
+        discoveryURL: http://keycloak-service.keycloak.svc:8080/realms/kubeportal
+        clientID: kubeportal
+      lokiURL: http://REPLACE_ME # e.g. http://loki-gateway.monitoring.svc
+      prometheusURL: http://REPLACE_ME # e.g. http://prometheus-server.monitoring.svc
+      # "instance" for the prometheus-community chart, "node" for
+      # kube-prometheus-stack (deploy/preflight/check-cluster.sh tells).
+      cadvisorNodeLabel: instance
+    database:
+      caSecret:
+        name: kubeportal-db-ca
+        key: ca.crt
+    networkPolicy:
+      enabled: true
+      apiServer:
+        # GKE control plane endpoint(s), e.g. the output of
+        # gcloud container clusters describe ... --format='value(privateClusterConfig.privateEndpoint)'
+        cidrs: ["REPLACE_ME/32"]
+        ports: [443]
+      egress:
+        loki:
+          namespace: REPLACE_ME
+          podLabels: { app.kubernetes.io/name: loki }
+          ports: [80, 3100, 8080]
+        prometheus:
+          namespace: REPLACE_ME
+          podLabels: { app.kubernetes.io/name: prometheus }
+          ports: [80, 9090]
+        keycloak:
+          namespace: keycloak
+          podLabels: { app.kubernetes.io/instance: keycloak, app.kubernetes.io/component: server }
+          ports: [8080]
+        postgres:
+          cidrs: ["REPLACE_ME_CLOUD_SQL_PRIVATE_IP/32"]
+          ports: [5432]

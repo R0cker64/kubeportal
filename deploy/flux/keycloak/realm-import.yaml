@@ -1,0 +1,87 @@
+# The `kubeportal` realm: confidential client with PKCE, the groups claim and
+# the administrator group. Imported once, when the realm does not exist yet;
+# later changes are made in the Keycloak console. Users and team groups are
+# created there too (or federated from your directory).
+#
+# Secret kubeportal-oidc (key client-secret) must exist in this namespace and,
+# with the same value, in the kubeportal namespace.
+apiVersion: k8s.keycloak.org/v2beta1
+kind: KeycloakRealmImport
+metadata:
+  name: kubeportal
+spec:
+  keycloakCRName: keycloak
+  placeholders:
+    KUBEPORTAL_CLIENT_SECRET:
+      secret:
+        name: kubeportal-oidc
+        key: client-secret
+  realm:
+    realm: kubeportal
+    enabled: true
+    sslRequired: external
+    registrationAllowed: false
+    resetPasswordAllowed: false
+    loginWithEmailAllowed: false
+    bruteForceProtected: true
+    passwordPolicy: "length(12) and notUsername and notEmail"
+    accessTokenLifespan: 300
+    ssoSessionIdleTimeout: 3600
+    ssoSessionMaxLifespan: 28800
+    groups:
+      - name: kubeportal-admin
+    clientScopes:
+      - name: openid
+        protocol: openid-connect
+      - name: profile
+        protocol: openid-connect
+        attributes:
+          include.in.token.scope: "true"
+        protocolMappers:
+          - name: username
+            protocol: openid-connect
+            protocolMapper: oidc-usermodel-attribute-mapper
+            config:
+              user.attribute: username
+              claim.name: preferred_username
+              jsonType.label: String
+              id.token.claim: "true"
+              access.token.claim: "true"
+              userinfo.token.claim: "true"
+      - name: groups
+        protocol: openid-connect
+        attributes:
+          include.in.token.scope: "true"
+        protocolMappers:
+          - name: groups
+            protocol: openid-connect
+            protocolMapper: oidc-group-membership-mapper
+            config:
+              claim.name: groups
+              full.path: "false"
+              id.token.claim: "true"
+              access.token.claim: "true"
+              userinfo.token.claim: "true"
+    clients:
+      - clientId: kubeportal
+        name: KubePortal
+        enabled: true
+        protocol: openid-connect
+        publicClient: false
+        clientAuthenticatorType: client-secret
+        secret: ${KUBEPORTAL_CLIENT_SECRET}
+        standardFlowEnabled: true
+        implicitFlowEnabled: false
+        directAccessGrantsEnabled: false
+        serviceAccountsEnabled: false
+        fullScopeAllowed: false
+        redirectUris:
+          - http://localhost:8080/auth/callback
+        webOrigins: []
+        attributes:
+          pkce.code.challenge.method: S256
+          post.logout.redirect.uris: http://localhost:8080/
+        defaultClientScopes:
+          - openid
+          - profile
+          - groups

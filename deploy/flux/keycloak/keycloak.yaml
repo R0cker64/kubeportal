@@ -1,0 +1,68 @@
+# Keycloak server managed by the operator. Its database lives in the same
+# Cloud SQL instance as the portal's (separate database and user), reached by
+# private IP with TLS verified against the Cloud SQL server CA.
+#
+# Secrets (create them before reconciling; never commit them):
+#   keycloak-db               username, password  (Cloud SQL user for Keycloak)
+#   cloudsql-ca               ca.crt              (Cloud SQL server CA)
+#   keycloak-bootstrap-admin  username, password  (first admin; rotate after setup)
+apiVersion: k8s.keycloak.org/v2beta1
+kind: Keycloak
+metadata:
+  name: keycloak
+spec:
+  instances: 1
+  image: quay.io/keycloak/keycloak:26.7.5@sha256:37dbaf6f0722c9ec246335f36e1ef8b2e6cb960f7c27e0d8c615121a3d475a85
+  # The upstream image is not pre-built (kc.sh build); with a custom image the
+  # operator would otherwise start it with --optimized and fail.
+  startOptimized: false
+  db:
+    vendor: postgres
+    # verify-ca: Cloud SQL server certificates do not carry the private IP,
+    # so the hostname cannot be verified; the CA still is.
+    url: jdbc:postgresql://REPLACE_ME_CLOUD_SQL_PRIVATE_IP:5432/keycloak?sslmode=verify-ca&sslfactory=org.postgresql.ssl.DefaultJavaSSLFactory
+    usernameSecret:
+      name: keycloak-db
+      key: username
+    passwordSecret:
+      name: keycloak-db
+      key: password
+  truststores:
+    cloudsql:
+      secret:
+        name: cloudsql-ca
+  http:
+    # v1 access is `kubectl port-forward` (TLS to the API server); switch to
+    # tlsSecret when Keycloak gets a domain (docs/roadmap.md).
+    httpEnabled: true
+  hostname:
+    # Fixed public issuer (docs/architecture.md): what the browser opens.
+    hostname: http://localhost:8180
+    # The portal reaches Keycloak through the in-cluster Service.
+    backchannelDynamic: true
+  bootstrapAdmin:
+    user:
+      secret: keycloak-bootstrap-admin
+  networkPolicy:
+    enabled: true
+  # The operator sets no security context; this makes the server and the
+  # realm import pods pass the `restricted` Pod Security Standard.
+  unsupported:
+    podTemplate:
+      spec:
+        securityContext:
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        containers:
+          - securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ALL]
+  resources:
+    requests:
+      cpu: 250m
+      memory: 768Mi
+    limits:
+      cpu: "1"
+      memory: 1536Mi
