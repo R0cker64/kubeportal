@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Creates the local kind cluster with Loki, Alloy, Prometheus, Keycloak,
 # PostgreSQL and the demo apps. Idempotent: safe to run again.
+#
+# KIND_DEV_STACK=0 skips the development Keycloak, PostgreSQL and portal
+# secrets (the install rehearsal brings its own; see deploy/rehearsal).
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 require docker kind kubectl helm openssl
@@ -21,20 +24,27 @@ if cluster_exists; then
   kind export kubeconfig --name "${CLUSTER_NAME}" --kubeconfig "${KUBECONFIG}"
 else
   log "creating kind cluster ${CLUSTER_NAME}"
-  kind create cluster --config "${KIND_DIR}/kind-config.yaml" --kubeconfig "${KUBECONFIG}" --wait 120s
+  kind create cluster --name "${CLUSTER_NAME}" --config "${KIND_DIR}/kind-config.yaml" \
+    --kubeconfig "${KUBECONFIG}" --wait 120s
 fi
 chmod 600 "${KUBECONFIG}"
 
+DEV_STACK="${KIND_DEV_STACK:-1}"
+namespaces=(monitoring dev staging prod)
+[[ "${DEV_STACK}" == 1 ]] && namespaces+=(keycloak kubeportal)
+
 log "namespaces"
-for ns in monitoring keycloak kubeportal dev staging prod; do
+for ns in "${namespaces[@]}"; do
   k create namespace "${ns}" --dry-run=client -o yaml | k apply -f - >/dev/null
 done
-for ns in kubeportal dev staging prod; do
+for ns in "${namespaces[@]}"; do
+  [[ "${ns}" == monitoring || "${ns}" == keycloak ]] && continue
   k label namespace "${ns}" --overwrite \
     pod-security.kubernetes.io/enforce=restricted \
     pod-security.kubernetes.io/warn=restricted >/dev/null
 done
 
+if [[ "${DEV_STACK}" == 1 ]]; then
 # Random local credentials, generated once and kept out of git (.kind/ is ignored).
 SECRETS_FILE="${STATE_DIR}/secrets.env"
 if [[ ! -f "${SECRETS_FILE}" ]]; then
@@ -64,6 +74,7 @@ apply_secret kubeportal kubeportal-oidc --from-literal=client-secret="${OIDC_CLI
 apply_secret kubeportal kubeportal-db --from-literal=password="${DB_PASSWORD}" \
   --from-literal=url="postgres://kubeportal:${DB_PASSWORD}@postgres.kubeportal.svc:5432/kubeportal?sslmode=disable"
 apply_secret kubeportal kubeportal-session --from-literal=key="${SESSION_KEY}"
+fi
 
 log "Loki ${LOKI_CHART_VERSION}"
 h upgrade --install loki loki --repo https://grafana.github.io/helm-charts \
@@ -77,6 +88,7 @@ log "Prometheus ${PROMETHEUS_CHART_VERSION}"
 h upgrade --install prometheus prometheus --repo https://prometheus-community.github.io/helm-charts \
   --version "${PROMETHEUS_CHART_VERSION}" -n monitoring -f "${KIND_DIR}/values/prometheus.yaml" --wait --timeout 10m
 
+if [[ "${DEV_STACK}" == 1 ]]; then
 log "Keycloak"
 k -n keycloak create configmap keycloak-realm \
   --from-file=kubeportal-realm.json="${KIND_DIR}/manifests/keycloak-realm.json" \
@@ -85,18 +97,23 @@ k apply -f "${KIND_DIR}/manifests/keycloak.yaml"
 
 log "PostgreSQL"
 k apply -f "${KIND_DIR}/manifests/postgres.yaml"
+fi
 
 log "demo apps"
 for ns in dev staging prod; do
   k -n "${ns}" apply -f "${KIND_DIR}/manifests/demo-apps.yaml"
 done
 
-log "waiting for Keycloak, PostgreSQL and demo apps"
-k -n keycloak rollout status deployment/keycloak --timeout 10m
-k -n kubeportal rollout status statefulset/postgres --timeout 5m
+log "waiting for the demo apps"
+if [[ "${DEV_STACK}" == 1 ]]; then
+  k -n keycloak rollout status deployment/keycloak --timeout 10m
+  k -n kubeportal rollout status statefulset/postgres --timeout 5m
+fi
 for ns in dev staging prod; do
   k -n "${ns}" rollout status deployment/payments-api --timeout 5m
 done
+
+[[ "${DEV_STACK}" == 1 ]] || { log "cluster ${CLUSTER_NAME} ready (without the development stack)"; exit 0; }
 
 cat <<MSG
 

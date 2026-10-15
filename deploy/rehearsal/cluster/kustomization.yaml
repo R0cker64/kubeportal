@@ -1,0 +1,35 @@
+# Install rehearsal: the real deploy/flux manifests, pointed at the overlays
+# of this directory. Reconciled by Flux from the GitHub repository.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../flux
+patches:
+  - target:
+      kind: Kustomization
+      group: kustomize.toolkit.fluxcd.io
+      name: keycloak
+    patch: |
+      - op: replace
+        path: /spec/path
+        value: ./deploy/rehearsal/keycloak
+      - op: add
+        path: /spec/postBuild
+        value:
+          substituteFrom:
+            - kind: ConfigMap
+              name: rehearsal-vars
+  - target:
+      kind: Kustomization
+      group: kustomize.toolkit.fluxcd.io
+      name: kubeportal
+    patch: |
+      - op: replace
+        path: /spec/path
+        value: ./deploy/rehearsal/kubeportal
+      - op: add
+        path: /spec/postBuild
+        value:
+          substituteFrom:
+            - kind: ConfigMap
+              name: rehearsal-vars

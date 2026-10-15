@@ -10,7 +10,7 @@ IMAGE ?= kubeportal:dev
 
 .PHONY: help
 help: ## List targets
-	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-z0-9-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 # --- Local environment (kind only; never touches the current kubectl context) ---
 
@@ -37,6 +37,24 @@ dev-e2e: ## Log in as each demo user and check team isolation through the portal
 .PHONY: dev-forward
 dev-forward: ## Port-forward the portal (:8080) and Keycloak (:8180) together
 	deploy/kind/forward-all.sh
+
+# --- Install rehearsal (second kind cluster installed like production) ---
+
+.PHONY: rehearsal-up
+rehearsal-up: ## Install rehearsal: kind cluster installed with Flux from GitHub and the GHCR chart (REHEARSAL_VERSION)
+	deploy/rehearsal/up.sh
+
+.PHONY: rehearsal-e2e
+rehearsal-e2e: ## Run the isolation e2e against the install rehearsal
+	KIND_CLUSTER_NAME=kubeportal-staging KEYCLOAK_SERVICE=keycloak-service deploy/kind/e2e.sh
+
+.PHONY: rehearsal-forward
+rehearsal-forward: ## Port-forward the rehearsal portal (:8080) and Keycloak (:8180)
+	KIND_CLUSTER_NAME=kubeportal-staging KEYCLOAK_SERVICE=keycloak-service deploy/kind/forward-all.sh
+
+.PHONY: rehearsal-down
+rehearsal-down: ## Delete the install rehearsal cluster and its fake Cloud SQL
+	deploy/rehearsal/down.sh
 
 .PHONY: dev-keycloak
 dev-keycloak: ## Port-forward Keycloak to http://localhost:8180

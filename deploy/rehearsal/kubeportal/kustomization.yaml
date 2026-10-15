@@ -1,0 +1,41 @@
+# The portal as in production, with this cluster's values in place of the
+# REPLACE_ME placeholders and the chart version under test.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../flux/kubeportal
+patches:
+  - target:
+      kind: OCIRepository
+      name: kubeportal
+    patch: |
+      - op: replace
+        path: /spec/ref/tag
+        value: "${KUBEPORTAL_VERSION}"
+  - target:
+      kind: HelmRelease
+      name: kubeportal
+    patch: |
+      - op: replace
+        path: /spec/values/config/environments
+        value: dev,staging,prod
+      - op: replace
+        path: /spec/values/config/lokiURL
+        value: http://loki-gateway.monitoring.svc
+      - op: replace
+        path: /spec/values/config/prometheusURL
+        value: http://prometheus-server.monitoring.svc
+      - op: replace
+        path: /spec/values/networkPolicy/apiServer
+        value:
+          cidrs: ["${APISERVER_IP}/32"]
+          ports: [6443]
+      - op: replace
+        path: /spec/values/networkPolicy/egress/loki/namespace
+        value: monitoring
+      - op: replace
+        path: /spec/values/networkPolicy/egress/prometheus/namespace
+        value: monitoring
+      - op: replace
+        path: /spec/values/networkPolicy/egress/postgres/cidrs
+        value: ["${CLOUDSQL_IP}/32"]

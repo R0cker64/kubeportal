@@ -11,7 +11,7 @@ cleanup() { for pid in "${PIDS[@]}"; do kill "${pid}" 2>/dev/null || true; done;
 trap cleanup EXIT INT TERM
 
 k_background -n kubeportal port-forward svc/kubeportal 8080:8080
-k_background -n keycloak port-forward svc/keycloak 8180:8080
+k_background -n keycloak port-forward "svc/${KEYCLOAK_SERVICE:-keycloak}" 8180:8080
 
 log "portal: http://localhost:8080   keycloak: http://localhost:8180   (Ctrl+C to stop)"
 # Stop everything as soon as either forward exits (e.g. port already in use).

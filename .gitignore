@@ -41,3 +41,4 @@ trivy-results*
 
 # Local kind environment (kubeconfig and generated credentials)
 .kind/
+.kind-*/

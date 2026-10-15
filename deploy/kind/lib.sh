@@ -6,8 +6,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 KIND_DIR="${ROOT_DIR}/deploy/kind"
-STATE_DIR="${ROOT_DIR}/.kind"
-CLUSTER_NAME="kubeportal"
+# KIND_CLUSTER_NAME selects another local cluster (e.g. the install
+# rehearsal); each cluster keeps its own state directory.
+CLUSTER_NAME="${KIND_CLUSTER_NAME:-kubeportal}"
+if [[ "${CLUSTER_NAME}" == "kubeportal" ]]; then
+  STATE_DIR="${ROOT_DIR}/.kind"
+else
+  STATE_DIR="${ROOT_DIR}/.kind-${CLUSTER_NAME}"
+fi
 KCONTEXT="kind-${CLUSTER_NAME}"
 export KUBECONFIG="${STATE_DIR}/kubeconfig"
 
