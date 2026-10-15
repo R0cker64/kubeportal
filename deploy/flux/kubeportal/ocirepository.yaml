@@ -1,0 +1,20 @@
+# The chart published by the release workflow. Flux refuses it unless the
+# cosign signature was made by that workflow on a version tag of the repo.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: kubeportal
+spec:
+  interval: 1h
+  url: oci://ghcr.io/r0cker64/charts/kubeportal
+  ref:
+    # Pin an exact version; bump it deliberately.
+    tag: "0.1.0"
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/R0cker64/kubeportal/\.github/workflows/release\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$

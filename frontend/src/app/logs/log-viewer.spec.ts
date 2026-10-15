@@ -30,6 +30,7 @@ describe('LogViewer', () => {
     await fixture.whenStable();
 
     const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('select')?.value).toBe('1h');
     expect(el.querySelector('img')).toBeNull();
     expect(el.querySelector('.text')?.textContent).toBe('<img src=x onerror=alert(1)>');
     http.verify();

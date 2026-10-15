@@ -38,6 +38,15 @@ config:
   logMaxSearchLen: 256
   liveTailsPerUser: 3
 
+# TLS to PostgreSQL. Put the server CA in the database URL with
+# sslmode=verify-ca (Cloud SQL by private IP) or verify-full, and mount it
+# from a Secret here; the file is /etc/kubeportal/db-ca/<key>, e.g.
+# ...?sslmode=verify-ca&sslrootcert=/etc/kubeportal/db-ca/ca.crt
+database:
+  caSecret:
+    name: ""   # empty = no CA mounted
+    key: ca.crt
+
 # Existing Secrets the chart references; it never creates or reads them.
 secrets:
   oidcClientSecret: { name: kubeportal-oidc, key: client-secret }
@@ -61,6 +70,7 @@ serviceAccount:
   # The ServiceAccount is read-only (get/list/watch) and has no access to
   # Secrets or ConfigMaps (ADR 0005). Do not widen it without a new ADR.
   name: ""
+  annotations: {}
 
 networkPolicy:
   enabled: true
@@ -69,7 +79,9 @@ networkPolicy:
   apiServer:
     cidrs: ["0.0.0.0/0"]
     ports: [443, 6443]
-  # Selectors for the dependencies the backend is allowed to reach.
+  # Dependencies the backend is allowed to reach: either pods (namespace +
+  # podLabels) or addresses outside the cluster (cidrs), e.g. Cloud SQL by
+  # private IP: postgres: { cidrs: ["10.20.0.5/32"], ports: [5432] }
   egress:
     loki:
       namespace: monitoring

@@ -1,0 +1,14 @@
+# Keycloak as in production; only the Cloud SQL address differs. The
+# rehearsal's PostgreSQL also requires TLS and is verified with verify-ca.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../flux/keycloak
+patches:
+  - target:
+      kind: Keycloak
+      name: keycloak
+    patch: |
+      - op: replace
+        path: /spec/db/url
+        value: jdbc:postgresql://${CLOUDSQL_IP}:5432/keycloak?sslmode=verify-ca&sslfactory=org.postgresql.ssl.DefaultJavaSSLFactory

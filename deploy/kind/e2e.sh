@@ -23,11 +23,14 @@ PORTAL=http://localhost:8080
 
 # forward starts a port-forward unless something already answers on the port
 # (e.g. make dev-portal running in another terminal).
+# Other clusters (the install rehearsal) never reuse a listener: it could be
+# forwarding to the development cluster.
 forward() {
   local ns="$1" svc="$2" port="$3" path="$4"
-  if ! curl -s -o /dev/null "http://localhost:${port}${path}"; then
-    k -n "${ns}" port-forward "svc/${svc}" "${port}:8080" >/dev/null 2>&1 &
-    PIDS+=("$!")
+  if curl -s -o /dev/null "http://localhost:${port}${path}"; then
+    [[ "${CLUSTER_NAME}" == kubeportal ]] || die "port ${port} is already in use; stop other port-forwards"
+  else
+    k_background -n "${ns}" port-forward "svc/${svc}" "${port}:8080" >/dev/null 2>&1
   fi
   for _ in $(seq 1 30); do
     curl -sf -o /dev/null "http://localhost:${port}${path}" && return 0
@@ -37,7 +40,8 @@ forward() {
 }
 
 forward kubeportal kubeportal 8080 /healthz
-forward keycloak keycloak 8180 /realms/kubeportal
+# The operator-managed Keycloak Service is keycloak-service.
+forward keycloak "${KEYCLOAK_SERVICE:-keycloak}" 8180 /realms/kubeportal
 
 # login USER: runs the browser flow and leaves the session in ${WORK}/USER.jar.
 login() {
@@ -134,6 +138,16 @@ check "admin deletes team search" "$(admin_call DELETE /api/admin/teams/search)"
 
 check "logout without CSRF header is rejected" \
   "$(curl -s -o /dev/null -w '%{http_code}' -X POST -b "${WORK}/alice.jar" "${PORTAL}/auth/logout")" 403
+# Deep links must render when loaded directly (CSP base-uri vs <base href>).
+CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+if [[ -n "${CHROME}" ]]; then
+  for path in /services/prod/deployment/payments-api /admin/nodes; do
+    check "deep link ${path} renders" "$(timeout 60 "${CHROME}" --headless=new --disable-gpu \
+      --virtual-time-budget=8000 --dump-dom "${PORTAL}${path}" 2>/dev/null | grep -c 'Iniciar sesión')" 1
+  done
+else
+  log "no Chrome found: skipping the deep link check"
+fi
 check "anonymous API access is rejected" "$(curl -s -o /dev/null -w '%{http_code}' "${PORTAL}/api/services")" 401
 
 exit "${fail}"

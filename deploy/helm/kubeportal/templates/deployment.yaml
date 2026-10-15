@@ -114,6 +114,21 @@ spec:
             privileged: false
             capabilities:
               drop: [ALL]
+          {{- if .Values.database.caSecret.name }}
+          volumeMounts:
+            - name: db-ca
+              mountPath: /etc/kubeportal/db-ca
+              readOnly: true
+          {{- end }}
+      {{- if .Values.database.caSecret.name }}
+      volumes:
+        - name: db-ca
+          secret:
+            secretName: {{ .Values.database.caSecret.name }}
+            items:
+              - key: {{ .Values.database.caSecret.key }}
+                path: {{ .Values.database.caSecret.key }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -12,8 +12,7 @@ trap cleanup EXIT
 
 forward() {
   local svc="$1" local_port="$2" remote_port="$3"
-  k -n monitoring port-forward "svc/${svc}" "${local_port}:${remote_port}" >/dev/null 2>&1 &
-  PIDS+=("$!")
+  k_background -n monitoring port-forward "svc/${svc}" "${local_port}:${remote_port}" >/dev/null 2>&1
   for _ in $(seq 1 30); do
     curl -s -o /dev/null "http://127.0.0.1:${local_port}/" && return 0
     sleep 0.5

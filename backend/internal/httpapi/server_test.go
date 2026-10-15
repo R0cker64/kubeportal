@@ -36,7 +36,8 @@ func TestSecurityHeadersOnEveryResponse(t *testing.T) {
 	for _, target := range []string{"/healthz", "/api/unknown", "/nope"} {
 		rec := do(t, h, http.MethodGet, target, nil)
 		csp := rec.Header().Get("Content-Security-Policy")
-		if !strings.Contains(csp, "frame-ancestors 'none'") || strings.Contains(csp, "unsafe-") {
+		if !strings.Contains(csp, "frame-ancestors 'none'") || strings.Contains(csp, "unsafe-") ||
+			!strings.Contains(csp, "base-uri 'self'") {
 			t.Errorf("%s: bad CSP %q", target, csp)
 		}
 		if rec.Header().Get("X-Content-Type-Options") != "nosniff" {

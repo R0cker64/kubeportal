@@ -4,7 +4,7 @@ Todo el desarrollo usa un cluster kind (ADR 0007). Los scripts de `deploy/kind/`
 
 ## Requisitos
 
-Go (versión de `backend/go.mod`), Node.js 24, Docker (con permiso para el usuario), kind, kubectl, Helm 4, openssl, golangci-lint v2, govulncheck, gitleaks y trivy.
+Go (versión de `backend/go.mod`), Node.js 24 o 26 (la imagen se construye con 26), Docker (con permiso para el usuario), kind, kubectl, Helm 4, openssl, golangci-lint v2, govulncheck, gitleaks y trivy.
 
 ## Límites de inotify (una sola vez por máquina)
 
@@ -23,7 +23,7 @@ Si tu usuario acaba de entrar al grupo `docker`, cierra sesión y vuelve a entra
 make dev-up       # crea el cluster y despliega todo (idempotente)
 make dev-verify   # comprueba {team="payments"} en Loki y label_team en kube-state-metrics
 make dev-deploy   # construye la imagen, la carga en kind, instala el chart y carga los equipos de ejemplo
-make dev-forward  # port-forward del portal (:8080) y de Keycloak (:8180) a la vez
+make dev-forward  # port-forward del portal (:8080) y de Keycloak (:8180) a la vez (se corta tras dev-deploy: vuelve a lanzarlo)
 make dev-portal   # port-forward del portal en http://localhost:8080
 make dev-keycloak # port-forward de Keycloak en http://localhost:8180
 make dev-down     # elimina el cluster
@@ -63,6 +63,23 @@ El mapeo de grupos a equipos de ejemplo (`team-payments` → `payments`, `team-c
 Para probar el portal en el navegador: `make dev-forward` (los dos port-forwards son necesarios: el login redirige a Keycloak en `localhost:8180`), abrir http://localhost:8080 y entrar con uno de los usuarios (la contraseña es `DEMO_USER_PASSWORD` de `.kind/secrets.env`).
 
 Las contraseñas, el secreto del client OIDC y la contraseña de PostgreSQL se generan al azar la primera vez en `.kind/secrets.env` (ignorado por git) y se cargan como Secrets de Kubernetes. No hay credenciales en el repositorio.
+
+## Ensayo de instalación
+
+Antes de instalar en un cluster real, `make rehearsal-up` crea un segundo cluster kind (`kubeportal-staging`) instalado como indica la [guía de instalación](installation.md), no como el entorno de desarrollo:
+
+- Flux reconcilia `deploy/flux/` desde el repositorio de GitHub (con los overlays de `deploy/rehearsal/`): operador de Keycloak, Keycloak con el realm importado y el chart firmado publicado en GHCR.
+- Un PostgreSQL fuera del cluster hace de Cloud SQL: se accede por IP, solo admite TLS y se verifica con su CA (`sslmode=verify-ca`), como en GCP.
+- Los usuarios y grupos se crean en Keycloak por su API de administración, como lo haría un administrador.
+
+```bash
+make rehearsal-up                 # REHEARSAL_VERSION=0.1.0-rc.1, REHEARSAL_REF=main por defecto
+make rehearsal-e2e                # el e2e de aislamiento contra el ensayo
+make rehearsal-forward            # http://localhost:8080 (credenciales en .kind-kubeportal-staging/secrets.env)
+make rehearsal-down               # borra el cluster, el falso Cloud SQL y sus credenciales
+```
+
+Usa los puertos 8080 y 8180, así que no puede correr a la vez que `make dev-forward`. Flux lee la rama indicada en GitHub: los cambios en `deploy/flux` o `deploy/rehearsal` tienen que estar subidos.
 
 ## Backend y frontend fuera del cluster
 

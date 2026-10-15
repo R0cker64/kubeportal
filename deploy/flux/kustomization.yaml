@@ -1,0 +1,7 @@
+# Entry point for the Flux Kustomization that reconciles this directory.
+# Only stack.yaml: keycloak/ and kubeportal/ are applied by their own Flux
+# Kustomizations (defined in stack.yaml), in order.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - stack.yaml

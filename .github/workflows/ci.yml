@@ -58,7 +58,7 @@ jobs:
           KUBEPORTAL_TEST_DATABASE_URL: postgres://postgres@127.0.0.1:5432/kubeportal_test?sslmode=disable
         run: go test -race -count=1 ./...
       - name: govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION} ./...
+        run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
 
   frontend:
     runs-on: ubuntu-24.04
@@ -71,7 +71,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          node-version: 26 # same major as the Dockerfile build stage
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci --ignore-scripts --no-fund
@@ -170,7 +170,7 @@ jobs:
       - run: make dev-deploy
       - name: Wait for logs to reach Loki
         run: |
-          for i in $(seq 1 18); do make dev-verify && exit 0; sleep 10; done
+          for _ in $(seq 1 18); do make dev-verify && exit 0; sleep 10; done
           exit 1
       - name: Team isolation end to end
         run: make dev-e2e

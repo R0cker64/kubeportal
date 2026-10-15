@@ -1,0 +1,118 @@
+# KubePortal on a real cluster with Flux (example to copy into your GitOps
+# repository). Replace every REPLACE_ME and the path of the `keycloak` and
+# `kubeportal` Kustomizations. See deploy/flux/README.md and
+# docs/installation.md.
+#
+# Order: keycloak-operator -> keycloak (server + realm) -> kubeportal.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keycloak
+  labels:
+    # The operator is patched below and the Keycloak pods get a security
+    # context through the Keycloak CR, so `restricted` can be enforced.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubeportal
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+# Official Keycloak Operator manifests, pinned to a release tag.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: keycloak-k8s-resources
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://github.com/keycloak/keycloak-k8s-resources
+  ref:
+    tag: "26.7.5"
+  ignore: |
+    /*
+    !/kubernetes/
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: keycloak-operator
+  namespace: flux-system
+spec:
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: keycloak-k8s-resources
+  path: ./kubernetes
+  prune: true
+  wait: true
+  timeout: 5m
+  images:
+    - name: quay.io/keycloak/keycloak-operator
+      digest: sha256:d5138f895d659ee9c0fe207e203c3655876956f956a7cbaa910d1bee4c1f615f
+  patches:
+    # Harden the operator pod to the `restricted` Pod Security Standard.
+    - target:
+        kind: Deployment
+        name: keycloak-operator
+      patch: |
+        - op: add
+          path: /spec/template/spec/securityContext
+          value:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+        - op: add
+          path: /spec/template/spec/containers/0/securityContext
+          value:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: keycloak
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: keycloak-operator
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: flux-system # your GitOps repository
+  path: ./REPLACE_ME/kubeportal/keycloak
+  prune: true
+  wait: true
+  timeout: 15m
+  # Flux cannot read the Keycloak CRs' status on its own: without these it
+  # would report ready before Keycloak runs and the realm is imported.
+  healthCheckExprs:
+    - apiVersion: k8s.keycloak.org/v2beta1
+      kind: Keycloak
+      current: status.conditions.exists(e, e.type == 'Ready' && e.status == 'True')
+    - apiVersion: k8s.keycloak.org/v2beta1
+      kind: KeycloakRealmImport
+      current: status.conditions.exists(e, e.type == 'Done' && e.status == 'True')
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kubeportal
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: keycloak
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: flux-system # your GitOps repository
+  path: ./REPLACE_ME/kubeportal/kubeportal
+  prune: true
+  wait: true
+  timeout: 10m

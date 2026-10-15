@@ -15,3 +15,5 @@ Formato: Contexto · Decisión · Consecuencias · Estado.
 | [0007](0007-kind-local-development.md) | Desarrollo local con kind | Aceptada |
 | [0008](0008-csp-nonce-for-angular-styles.md) | Nonce de CSP para los estilos de componentes de Angular | Aceptada |
 | [0009](0009-sessions-without-persisted-tokens.md) | Sesiones del BFF sin tokens persistidos | Aceptada |
+| [0010](0010-release-ghcr-cosign.md) | Publicación en GHCR firmada con cosign keyless | Aceptada |
+| [0011](0011-keycloak-operator-cloud-sql.md) | Keycloak con el operador oficial y Cloud SQL por IP privada | Aceptada |

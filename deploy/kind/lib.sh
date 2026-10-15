@@ -6,8 +6,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 KIND_DIR="${ROOT_DIR}/deploy/kind"
-STATE_DIR="${ROOT_DIR}/.kind"
-CLUSTER_NAME="kubeportal"
+# KIND_CLUSTER_NAME selects another local cluster (e.g. the install
+# rehearsal); each cluster keeps its own state directory.
+CLUSTER_NAME="${KIND_CLUSTER_NAME:-kubeportal}"
+if [[ "${CLUSTER_NAME}" == "kubeportal" ]]; then
+  STATE_DIR="${ROOT_DIR}/.kind"
+else
+  STATE_DIR="${ROOT_DIR}/.kind-${CLUSTER_NAME}"
+fi
 KCONTEXT="kind-${CLUSTER_NAME}"
 export KUBECONFIG="${STATE_DIR}/kubeconfig"
 
@@ -43,6 +49,16 @@ guard_kind_context() {
 k() {
   guard_kind_context
   kubectl --kubeconfig "${KUBECONFIG}" --context "${KCONTEXT}" "$@"
+}
+
+# k_background starts kubectl in the background and appends its PID to the
+# caller's PIDS array. Backgrounding the k function instead would record the
+# PID of a subshell, and killing it would leave kubectl (e.g. a port-forward)
+# running.
+k_background() {
+  guard_kind_context
+  kubectl --kubeconfig "${KUBECONFIG}" --context "${KCONTEXT}" "$@" &
+  PIDS+=("$!")
 }
 
 h() {
