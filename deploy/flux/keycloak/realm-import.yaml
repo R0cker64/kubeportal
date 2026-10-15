@@ -9,6 +9,10 @@ apiVersion: k8s.keycloak.org/v2beta1
 kind: KeycloakRealmImport
 metadata:
   name: kubeportal
+  annotations:
+    # ${KUBEPORTAL_CLIENT_SECRET} is filled by the Keycloak operator; keep
+    # Flux variable substitution (postBuild) away from it.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
 spec:
   keycloakCRName: keycloak
   placeholders:
