@@ -89,7 +89,16 @@ spec:
   path: ./REPLACE_ME/kubeportal/keycloak
   prune: true
   wait: true
-  timeout: 10m
+  timeout: 15m
+  # Flux cannot read the Keycloak CRs' status on its own: without these it
+  # would report ready before Keycloak runs and the realm is imported.
+  healthCheckExprs:
+    - apiVersion: k8s.keycloak.org/v2beta1
+      kind: Keycloak
+      current: status.conditions.exists(e, e.type == 'Ready' && e.status == 'True')
+    - apiVersion: k8s.keycloak.org/v2beta1
+      kind: KeycloakRealmImport
+      current: status.conditions.exists(e, e.type == 'Done' && e.status == 'True')
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
