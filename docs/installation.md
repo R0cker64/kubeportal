@@ -14,6 +14,8 @@ Navegador ───────────────────────�
  Loki, Prometheus   Cloud SQL (IP privada): bases kubeportal y keycloak
 ```
 
+Antes de tocar el cluster real puedes repetir toda la instalación en local con `make rehearsal-up` ([ensayo de instalación](development.md#ensayo-de-instalación)): mismos manifiestos de Flux, el chart publicado y un PostgreSQL con TLS que imita a Cloud SQL.
+
 ## 1. Comprobar los prerrequisitos
 
 Los mismos de [arquitectura](architecture.md#prerrequisitos-en-el-cluster): label `team` y `app.kubernetes.io/name` en los workloads, el colector de logs copiándolos a Loki, kube-state-metrics con el allowlist de labels y cAdvisor en Prometheus.
