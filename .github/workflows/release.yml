@@ -1,12 +1,15 @@
 name: Release
 
-# Publishes a version when a tag vX.Y.Z is pushed: the image to
+# Publishes a version when a tag vX.Y.Z (or a release candidate vX.Y.Z-rc.N)
+# is pushed: the image to
 # ghcr.io/r0cker64/kubeportal and the chart to oci://ghcr.io/r0cker64/charts,
 # both signed with cosign keyless (GitHub OIDC). The chart pins the image by
 # digest. See docs/adr/0010-release-ghcr-cosign.md.
 on:
   push:
-    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+"
 
 permissions:
   contents: read
@@ -38,7 +41,7 @@ jobs:
         id: version
         run: |
           v="${GITHUB_REF_NAME#v}"
-          [[ "${v}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid tag ${GITHUB_REF_NAME}"; exit 1; }
+          [[ "${v}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]] || { echo "invalid tag ${GITHUB_REF_NAME}"; exit 1; }
           echo "version=${v}" >> "${GITHUB_OUTPUT}"
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
