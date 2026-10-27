@@ -52,7 +52,7 @@ jobs:
       # Private repositories without GitHub Advanced Security cannot upload
       # results to code scanning, so the SARIF is checked here instead. Once
       # the repository is public, results are uploaded to the Security tab.
-      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           category: /language:${{ matrix.language }}
           upload: ${{ steps.repo.outputs.private == 'true' && 'never' || 'always' }}
